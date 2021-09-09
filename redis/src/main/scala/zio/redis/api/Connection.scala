@@ -308,7 +308,7 @@ private[redis] object Connection {
   final val Auth               = "AUTH"
   final val ClientCaching      = "CLIENT CACHING"
   final val ClientId           = "CLIENT ID"
-  final val ClientInfo         = "CLIENT INFO"
+  final val ClientInfo         = "CLIENT -INFO"
   final val ClientKill         = "CLIENT KILL"
   final val ClientList         = "CLIENT LIST"
   final val ClientGetName      = "CLIENT GETNAME"
