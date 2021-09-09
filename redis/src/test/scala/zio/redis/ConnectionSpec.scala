@@ -129,6 +129,7 @@ trait ConnectionSpec extends BaseSpec {
       suite("clientTracking")(
         testM("enable tracking in broadcast mode and with prefixes") {
           for {
+            _            <- clientTrackingOff
             _            <- clientTrackingOn(None, Some(ClientTrackingMode.Broadcast), prefixes = Set("foo"))
             trackingInfo <- clientTrackingInfo
           } yield assert(trackingInfo.redirect)(equalTo(ClientTrackingRedirect.NotRedirected)) &&
