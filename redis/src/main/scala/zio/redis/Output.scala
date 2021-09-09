@@ -801,7 +801,7 @@ object Output {
               user = client.get("user")
             )
 
-            println("name = " + info.name)
+            //println("name = " + info.name)
 
             info
           }

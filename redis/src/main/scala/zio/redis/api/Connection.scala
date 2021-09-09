@@ -62,7 +62,13 @@ trait Connection {
   final def clientInfo: ZIO[RedisExecutor, RedisError, ClientInfo] = {
     val command = RedisCommand(ClientInfo, NoInput, ClientInfoOutput)
 
-    command.run(()).map(_.head)
+    command.run(()).map { x =>
+      val res = x.head
+
+      println("result " + res.id + "  " + res.name)
+
+      res
+    }
   }
 
   /**
