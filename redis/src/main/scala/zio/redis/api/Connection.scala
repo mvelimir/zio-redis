@@ -59,10 +59,10 @@ trait Connection {
    *
    * @return information on the current client
    */
-  final def clientInfo: ZIO[RedisExecutor, RedisError, Chunk[ClientInfo]] = {
+  final def clientInfo: ZIO[RedisExecutor, RedisError, ClientInfo] = {
     val command = RedisCommand(ClientInfo, NoInput, ClientInfoOutput)
 
-    command.run(()) //.map(_.head)
+    command.run(()).map(_.head)
   }
 
   /**
