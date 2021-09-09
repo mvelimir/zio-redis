@@ -42,6 +42,7 @@ trait ConnectionSpec extends BaseSpec {
       suite("clientInfo")(
         testM("get client info") {
           for {
+            _ <- clientSetName("abcdef")
             _ <- clientInfo
           } yield assert(())(isUnit)
         }

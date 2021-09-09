@@ -730,11 +730,11 @@ object Output {
         case _: NumberFormatException => None
       }
 
-    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[ClientInfo] = {
-      println("test")
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[ClientInfo] =
       respValue match {
         case bulk @ RespValue.BulkString(_) if bulk.asString == "" => Chunk.empty
         case bulk @ RespValue.BulkString(_) =>
+          println(bulk.asString)
           val clients: List[Map[String, String]] = bulk.asString.split('\n').toList.map {
             _.split(' ').toList.map {
               _.split('=').toList match {
@@ -804,7 +804,6 @@ object Output {
           }
         case other => throw ProtocolError(s"$other isn't a bulk string")
       }
-    }
   }
 
   case object ClientTrackingInfoOutput extends Output[ClientTrackingInfo] {
