@@ -109,23 +109,23 @@ trait ConnectionSpec extends BaseSpec {
           } yield assert(unit)(isUnit)
         }
       ),
-//      suite("set and get name")(
-//        testM("clientSetName") {
-//          for {
-//            _    <- clientSetName("foo")
-//            info <- clientInfo
-//            name  = info.name.getOrElse("")
-//          } yield assert(name)(equalTo("foo"))
-//        },
-//        testM("clientGetName") {
-//          for {
-//            _           <- clientSetName("bar")
-//            name        <- clientGetName
-//            info        <- clientInfo
-//            expectedName = info.name.getOrElse("")
-//          } yield assert(name.getOrElse(""))(equalTo(expectedName))
-//        }
-//      ),
+      suite("set and get name")(
+        testM("clientSetName") {
+          for {
+            _    <- clientSetName("foo")
+            info <- clientInfo
+            name  = info.name.getOrElse("")
+          } yield assert(name)(equalTo("foo"))
+        },
+        testM("clientGetName") {
+          for {
+            _           <- clientSetName("bar")
+            name        <- clientGetName
+            info        <- clientInfo
+            expectedName = info.name.getOrElse("")
+          } yield assert(name.getOrElse(""))(equalTo(expectedName))
+        }
+      ),
       suite("clientTracking")(
         testM("enable tracking in broadcast mode and with prefixes") {
           for {
