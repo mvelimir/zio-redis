@@ -110,20 +110,18 @@ trait ConnectionSpec extends BaseSpec {
         }
       ),
       suite("set and get name")(
-        testM("clientSetName") {
-          for {
-            _    <- clientSetName("foo")
-            info <- clientList()()
-            name  = info.head.name.getOrElse("")
-          } yield assert(name)(equalTo("foo"))
-        },
+//        testM("clientSetName") {
+//          for {
+//            _    <- clientSetName("foo")
+//            info <- clientInfo
+//            name  = info.name.getOrElse("")
+//          } yield assert(name)(equalTo("foo"))
+//        },
         testM("clientGetName") {
           for {
-            _           <- clientSetName("bar")
-            name        <- clientGetName
-            info        <- clientList()()
-            expectedName = info.head.name.getOrElse("")
-          } yield assert(name.getOrElse(""))(equalTo(expectedName))
+            _    <- clientSetName("bar")
+            name <- clientGetName
+          } yield assert(name.getOrElse(""))(equalTo("bar"))
         }
       ),
       suite("clientTracking")(
