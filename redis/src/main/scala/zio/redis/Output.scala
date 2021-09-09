@@ -728,20 +728,15 @@ object Output {
 
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[ClientInfo] =
       respValue match {
+        case bulk @ RespValue.BulkString(_) if bulk.asString == "" => Chunk.empty
         case bulk @ RespValue.BulkString(_) =>
-          println(bulk.asString)
           val clients: List[Map[String, String]] = bulk.asString.split('\n').toList.map {
-            _.trim
-              .split(' ')
-              .toList
-              .map {
-                _.split('=').toList match {
-                  case key :: value :: Nil => key    -> value
-                  case "name" :: Nil       => "name" -> ""
-                  case other               => throw ProtocolError(s"Invalid text $other in client information")
-                }
+            _.split(' ').toList.map {
+              _.split('=').toList match {
+                case key :: value :: Nil => key -> value
+                case other               => throw ProtocolError(s"Invalid text $other in client information")
               }
-              .toMap
+            }.toMap
           }
           Chunk.fromIterable(clients).map { client =>
             val flags: Set[ClientFlag] = client
@@ -774,10 +769,7 @@ object Output {
                 .getOrElse(ClientEvents())
             ClientInfo(
               id = client.get("id").flatMap(parseLong).getOrElse(0L),
-              name = client.get("name").flatMap {
-                case ""    => None
-                case value => Some(value)
-              },
+              name = client.get("name"),
               address = client.get("addr").map { str =>
                 Address(InetAddress.getByName(str.split(':')(0)), str.split(':')(1).toInt)
               },

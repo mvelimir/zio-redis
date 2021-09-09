@@ -2543,7 +2543,6 @@ private[redis] object TestExecutor {
                         "addr"      -> "127.0.0.1:57646",
                         "laddr"     -> "127.0.0.1:6379",
                         "fd"        -> "8",
-                        "name"      -> "",
                         "age"       -> "655215",
                         "idle"      -> "0",
                         "flags"     -> "N",
