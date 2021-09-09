@@ -114,7 +114,7 @@ trait ConnectionSpec extends BaseSpec {
           for {
             _    <- clientSetName("foo")
             info <- clientInfo
-            name  = info.name.getOrElse("")
+            name  = info.head.name.getOrElse("")
           } yield assert(name)(equalTo("foo"))
         },
         testM("clientGetName") {
@@ -122,7 +122,7 @@ trait ConnectionSpec extends BaseSpec {
             _           <- clientSetName("bar")
             name        <- clientGetName
             info        <- clientInfo
-            expectedName = info.name.getOrElse("")
+            expectedName = info.head.name.getOrElse("")
           } yield assert(name.getOrElse(""))(equalTo(expectedName))
         }
       ),
