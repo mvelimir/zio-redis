@@ -730,13 +730,17 @@ object Output {
       respValue match {
         case bulk @ RespValue.BulkString(_) =>
           val clients: List[Map[String, String]] = bulk.asString.split('\n').toList.map {
-            _.split(' ').toList.map {
-              _.split('=').toList match {
-                case key :: value :: Nil => key    -> value
-                case "name" :: Nil       => "name" -> ""
-                case other               => throw ProtocolError(s"Invalid text $other in client information")
+            _.trim
+              .split(' ')
+              .toList
+              .map {
+                _.split('=').toList match {
+                  case key :: value :: Nil => key    -> value
+                  case "name" :: Nil       => "name" -> ""
+                  case other               => throw ProtocolError(s"Invalid text $other in client information")
+                }
               }
-            }.toMap
+              .toMap
           }
           Chunk.fromIterable(clients).map { client =>
             val flags: Set[ClientFlag] = client
