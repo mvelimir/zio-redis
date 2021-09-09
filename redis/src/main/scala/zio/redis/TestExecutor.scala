@@ -2540,9 +2540,10 @@ private[redis] object TestExecutor {
       clientInfo <- TMap
                       .make(
                         "id"        -> "174716",
-                        "addr"      -> "127.0.0.1:8000",
+                        "addr"      -> "127.0.0.1:57646",
                         "laddr"     -> "127.0.0.1:6379",
                         "fd"        -> "8",
+                        "name"      -> "",
                         "age"       -> "655215",
                         "idle"      -> "0",
                         "flags"     -> "N",
