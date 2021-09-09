@@ -126,28 +126,28 @@ trait ConnectionSpec extends BaseSpec {
 //          } yield assert(name.getOrElse(""))(equalTo(expectedName))
 //        }
 //      ),
-//      suite("clientTracking")(
-//        testM("enable tracking in broadcast mode and with prefixes") {
-//          for {
-//            _            <- clientTrackingOn(None, Some(ClientTrackingMode.Broadcast), prefixes = Set("foo"))
-//            trackingInfo <- clientTrackingInfo
-//          } yield assert(trackingInfo.redirect)(equalTo(ClientTrackingRedirect.NotRedirected)) &&
-//            assert(trackingInfo.flags)(
-//              equalTo(ClientTrackingFlags(clientSideCaching = true, trackingMode = Some(ClientTrackingMode.Broadcast)))
-//            ) &&
-//            assert(trackingInfo.prefixes)(equalTo(Set("foo")))
-//        },
-//        testM("disable tracking") {
-//          for {
-//            _            <- clientTrackingOff
-//            trackingInfo <- clientTrackingInfo
-//          } yield assert(trackingInfo.redirect)(equalTo(ClientTrackingRedirect.NotEnabled)) &&
-//            assert(trackingInfo.flags)(
-//              equalTo(ClientTrackingFlags(clientSideCaching = false))
-//            ) &&
-//            assert(trackingInfo.prefixes)(equalTo(Set.empty[String]))
-//       }
-//      ),
+      suite("clientTracking")(
+        testM("enable tracking in broadcast mode and with prefixes") {
+          for {
+            _            <- clientTrackingOn(None, Some(ClientTrackingMode.Broadcast), prefixes = Set("foo"))
+            trackingInfo <- clientTrackingInfo
+          } yield assert(trackingInfo.redirect)(equalTo(ClientTrackingRedirect.NotRedirected)) &&
+            assert(trackingInfo.flags)(
+              equalTo(ClientTrackingFlags(clientSideCaching = true, trackingMode = Some(ClientTrackingMode.Broadcast)))
+            ) &&
+            assert(trackingInfo.prefixes)(equalTo(Set("foo")))
+        },
+        testM("disable tracking") {
+          for {
+            _            <- clientTrackingOff
+            trackingInfo <- clientTrackingInfo
+          } yield assert(trackingInfo.redirect)(equalTo(ClientTrackingRedirect.NotEnabled)) &&
+            assert(trackingInfo.flags)(
+              equalTo(ClientTrackingFlags(clientSideCaching = false))
+            ) &&
+            assert(trackingInfo.prefixes)(equalTo(Set.empty[String]))
+        }
+      ),
       suite("clientTrackingInfo")(
         testM("get tracking info when tracking is disabled") {
           for {
