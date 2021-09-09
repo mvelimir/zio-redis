@@ -51,24 +51,24 @@ trait ConnectionSpec extends BaseSpec {
 //            assert(name)(equalTo(expectedName.getOrElse("")))
 //        }
 //      ),
-//      suite("clientKill")(
-//        testM("error when a connection with the specifed address doesn't exist") {
-//          for {
-//            error <- clientKill(Address(InetAddress.getByName("0.0.0.0"), 0)).either
-//          } yield assert(error)(isLeft)
-//        },
-//        testM("specify filters that don't kill the connection") {
-//          for {
-//            clientsKilled <- clientKill(ClientKillFilter.SkipMe(false), ClientKillFilter.Id(3341L))
-//          } yield assert(clientsKilled)(equalTo(0L))
-//        },
-//        testM("specify filters that kill the connection but skipme is enabled") {
-//          for {
-//            id            <- clientId
-//            clientsKilled <- clientKill(ClientKillFilter.SkipMe(true), ClientKillFilter.Id(id))
-//          } yield assert(clientsKilled)(equalTo(0L))
-//        }
-//      ),
+        suite("clientKill")(
+          testM("error when a connection with the specifed address doesn't exist") {
+            for {
+              error <- clientKill(Address(InetAddress.getByName("0.0.0.0"), 0)).either
+            } yield assert(error)(isLeft)
+          },
+          testM("specify filters that don't kill the connection") {
+            for {
+              clientsKilled <- clientKill(ClientKillFilter.SkipMe(false), ClientKillFilter.Id(3341L))
+            } yield assert(clientsKilled)(equalTo(0L))
+          },
+          testM("specify filters that kill the connection but skipme is enabled") {
+            for {
+              id            <- clientId
+              clientsKilled <- clientKill(ClientKillFilter.SkipMe(true), ClientKillFilter.Id(id))
+            } yield assert(clientsKilled)(equalTo(0L))
+          }
+        ),
 //      suite("clientList")(
 //        testM("get client info") {
 //          for {
@@ -109,15 +109,14 @@ trait ConnectionSpec extends BaseSpec {
           } yield assert(unit)(isUnit)
         }
       ),
-      suite("set and get name")(
-        testM("clientSetName") {
-          for {
-            _    <- clientSetName("foo")
-            info <- clientInfo
-            name  = info.name.getOrElse("")
-          } yield assert(name)(equalTo("foo"))
-        }
-      ),
+//      suite("set and get name")(
+//        testM("clientSetName") {
+//          for {
+//            _    <- clientSetName("foo")
+//            info <- clientInfo
+//            name  = info.name.getOrElse("")
+//          } yield assert(name)(equalTo("foo"))
+//        },
 //        testM("clientGetName") {
 //          for {
 //            _           <- clientSetName("bar")
@@ -184,14 +183,14 @@ trait ConnectionSpec extends BaseSpec {
 //          )
 //        }
 //     ),
-//      suite("clientUnblock")(
-//       testM("unblock client that isn't blocked") {
-//          for {
-//            id   <- clientId
-//            bool <- clientUnblock(id)
-//          } yield assert(bool)(equalTo(false))
-//        }
-//      ),
+      suite("clientUnblock")(
+        testM("unblock client that isn't blocked") {
+            for {
+              id   <- clientId
+              bool <- clientUnblock(id)
+            } yield assert(bool)(equalTo(false))
+          }
+       ),
       suite("ping")(
         testM("PING with no input") {
           ping(None).map(assert(_)(equalTo("PONG")))
