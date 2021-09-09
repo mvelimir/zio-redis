@@ -22,24 +22,10 @@ object ApiSpec
     // scalafix:on
     suite("Redis commands")(
       suite("Live Executor")(
-        connectionSuite,
-        keysSuite,
-        listSuite,
-        setsSuite,
-        sortedSetsSuite,
-        stringsSuite,
-        geoSuite,
-        hyperLogLogSuite,
-        hashSuite,
-        streamsSuite
+        connectionSuite
       ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live),
       suite("Test Executor")(
-        connectionSuite,
-        setsSuite,
-        hyperLogLogSuite,
-        listSuite,
-        hashSuite,
-        sortedSetsSuite
+        connectionSuite
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(TestExecutorUnsupportedTag))
         .get
         .provideCustomLayerShared(RedisExecutor.test ++ Clock.live)
