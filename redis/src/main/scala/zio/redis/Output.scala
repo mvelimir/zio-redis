@@ -736,12 +736,16 @@ object Output {
         case bulk @ RespValue.BulkString(_) =>
           println(bulk.asString)
           val clients: List[Map[String, String]] = bulk.asString.split('\n').toList.map {
-            _.split(' ').toList.map {
-              _.split('=').toList match {
-                case key :: value :: Nil => key -> value
-                case other               => throw ProtocolError(s"Invalid text $other in client information")
+            _.trim
+              .split(' ')
+              .toList
+              .map {
+                _.split('=').toList match {
+                  case key :: value :: Nil => key -> value
+                  case other               => throw ProtocolError(s"Invalid text $other in client information")
+                }
               }
-            }.toMap
+              .toMap
           }
           Chunk.fromIterable(clients).map { client =>
             val flags: Set[ClientFlag] = client
