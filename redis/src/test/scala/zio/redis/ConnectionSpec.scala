@@ -12,24 +12,24 @@ trait ConnectionSpec extends BaseSpec {
 
   val connectionSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =
     suite("connection")(
-      suite("clientCaching")(
-        testM("track keys") {
-          for {
-            _            <- clientTrackingOff
-            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
-            _            <- clientCaching(true)
-            trackingInfo <- clientTrackingInfo
-          } yield assert(trackingInfo.flags.caching)(isSome(isTrue))
-        },
-        testM("don't track keys") {
-          for {
-            _            <- clientTrackingOff
-            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
-            _            <- clientCaching(false)
-            trackingInfo <- clientTrackingInfo
-          } yield assert(trackingInfo.flags.caching)(isSome(isFalse))
-        }
-      ),
+//      suite("clientCaching")(
+//        testM("track keys") {
+//          for {
+//            _            <- clientTrackingOff
+//            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
+//            _            <- clientCaching(true)
+//            trackingInfo <- clientTrackingInfo
+//          } yield assert(trackingInfo.flags.caching)(isSome(isTrue))
+//        },
+//        testM("don't track keys") {
+//          for {
+//            _            <- clientTrackingOff
+//            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
+//            _            <- clientCaching(false)
+//            trackingInfo <- clientTrackingInfo
+//          } yield assert(trackingInfo.flags.caching)(isSome(isFalse))
+//        }
+//      ),
       suite("clientId")(
         testM("get client id") {
           for {
