@@ -83,20 +83,20 @@ trait ConnectionSpec extends BaseSpec {
 //          } yield assert(emptyChunk)(equalTo(Chunk.empty))
 //        }
 //      ),
-//      suite("clientGetRedir")(
-//        testM("tracking disabled") {
-//          for {
-//            _     <- clientTrackingOff
-//            redir <- clientGetRedir
-//          } yield assert(redir)(equalTo(ClientTrackingRedirect.NotEnabled))
-//        },
-//        testM("tracking enabled but not redirecting") {
-//         for {
-//            _     <- clientTrackingOn()
-//            redir <- clientGetRedir
-//          } yield assert(redir)(equalTo(ClientTrackingRedirect.NotRedirected))
-//        }
-//      ),
+      suite("clientGetRedir")(
+        testM("tracking disabled") {
+          for {
+            _     <- clientTrackingOff
+            redir <- clientGetRedir
+          } yield assert(redir)(equalTo(ClientTrackingRedirect.NotEnabled))
+        },
+        testM("tracking enabled but not redirecting") {
+          for {
+            _     <- clientTrackingOn()
+            redir <- clientGetRedir
+          } yield assert(redir)(equalTo(ClientTrackingRedirect.NotRedirected))
+        }
+      ),
       suite("client pause and unpause")(
         testM("clientPause") {
           for {
