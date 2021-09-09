@@ -45,12 +45,10 @@ object RedisExecutor {
     override val codec: Codec
   ) extends Service {
 
-    def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] = {
-      println(command.map(_.asString).fold("")(_ + " " + _))
+    def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
       Promise
         .make[RedisError, RespValue]
         .flatMap(promise => reqQueue.offer(Request(command, promise)) *> promise.await)
-    }
 
     /**
      * Opens a connection to the server and launches send and receive operations.
