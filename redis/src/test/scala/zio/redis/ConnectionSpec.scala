@@ -148,41 +148,41 @@ trait ConnectionSpec extends BaseSpec {
 //            assert(trackingInfo.prefixes)(equalTo(Set.empty[String]))
 //       }
 //      ),
-//      suite("clientTrackingInfo")(
-//        testM("get tracking info when tracking is disabled") {
-//          for {
-//            _            <- clientTrackingOff
-//            trackingInfo <- clientTrackingInfo
-//          } yield assert(trackingInfo)(
-//            equalTo(
-//              ClientTrackingInfo(
-//                flags = ClientTrackingFlags(clientSideCaching = false),
-//                redirect = ClientTrackingRedirect.NotEnabled
-//              )
-//            )
-//          )
-//        },
-//        testM("get tracking info when tracking is enabled in optin mode with noloop and caching on") {
-//          for {
-//            _            <- clientTrackingOff
-//            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn), noLoop = true)
-//            _            <- clientCaching(true)
-//            trackingInfo <- clientTrackingInfo
-//          } yield assert(trackingInfo)(
-//            equalTo(
-//              ClientTrackingInfo(
-//                flags = ClientTrackingFlags(
-//                  clientSideCaching = true,
-//                  trackingMode = Some(ClientTrackingMode.OptIn),
-//                  caching = Some(true),
-//                  noLoop = true
-//                ),
-//                redirect = ClientTrackingRedirect.NotRedirected
-//              )
-//            )
-//          )
-//        }
-//     ),
+      suite("clientTrackingInfo")(
+        testM("get tracking info when tracking is disabled") {
+          for {
+            _            <- clientTrackingOff
+            trackingInfo <- clientTrackingInfo
+          } yield assert(trackingInfo)(
+            equalTo(
+              ClientTrackingInfo(
+                flags = ClientTrackingFlags(clientSideCaching = false),
+                redirect = ClientTrackingRedirect.NotEnabled
+              )
+            )
+          )
+        },
+        testM("get tracking info when tracking is enabled in optin mode with noloop and caching on") {
+          for {
+            _            <- clientTrackingOff
+            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn), noLoop = true)
+            _            <- clientCaching(true)
+            trackingInfo <- clientTrackingInfo
+          } yield assert(trackingInfo)(
+            equalTo(
+              ClientTrackingInfo(
+                flags = ClientTrackingFlags(
+                  clientSideCaching = true,
+                  trackingMode = Some(ClientTrackingMode.OptIn),
+                  caching = Some(true),
+                  noLoop = true
+                ),
+                redirect = ClientTrackingRedirect.NotRedirected
+              )
+            )
+          )
+        }
+      ),
       suite("clientUnblock")(
         testM("unblock client that isn't blocked") {
           for {
