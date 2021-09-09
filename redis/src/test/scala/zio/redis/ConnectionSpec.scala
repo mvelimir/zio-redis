@@ -12,24 +12,24 @@ trait ConnectionSpec extends BaseSpec {
 
   val connectionSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =
     suite("connection")(
-//      suite("clientCaching")(
-//        testM("track keys") {
-//          for {
-//            _            <- clientTrackingOff
-//            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
-//            _            <- clientCaching(true)
-//            trackingInfo <- clientTrackingInfo
-//          } yield assert(trackingInfo.flags.caching)(isSome(isTrue))
-//        },
-//        testM("don't track keys") {
-//          for {
-//            _            <- clientTrackingOff
-//            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
-//            _            <- clientCaching(false)
-//            trackingInfo <- clientTrackingInfo
-//          } yield assert(trackingInfo.flags.caching)(isSome(isFalse))
-//        }
-//      ),
+      suite("clientCaching")(
+        testM("track keys") {
+          for {
+            _            <- clientTrackingOff
+            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
+            _            <- clientCaching(true)
+            trackingInfo <- clientTrackingInfo
+          } yield assert(trackingInfo.flags.caching)(isSome(isTrue))
+        },
+        testM("don't track keys") {
+          for {
+            _            <- clientTrackingOff
+            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
+            _            <- clientCaching(false)
+            trackingInfo <- clientTrackingInfo
+          } yield assert(trackingInfo.flags.caching)(isSome(isFalse))
+        }
+      ),
 //      suite("clientId")(
 //        testM("get client id") {
 //          for {
@@ -39,18 +39,18 @@ trait ConnectionSpec extends BaseSpec {
 //          } yield assert(id)(equalTo(expectedId))
 //        }
 //      ),
-      suite("clientInfo")(
-        testM("get client info") {
-          for {
-            info         <- clientInfo
-            id            = info.id
-            name          = info.name.getOrElse("")
-            expectedId   <- clientId
-            expectedName <- clientGetName
-          } yield assert(id)(equalTo(expectedId)) &&
-            assert(name)(equalTo(expectedName.getOrElse("")))
-        }
-      ),
+//      suite("clientInfo")(
+//        testM("get client info") {
+//          for {
+//            info         <- clientInfo
+//            id            = info.id
+//            name          = info.name.getOrElse("")
+//            expectedId   <- clientId
+//            expectedName <- clientGetName
+//          } yield assert(id)(equalTo(expectedId)) &&
+//            assert(name)(equalTo(expectedName.getOrElse("")))
+//        }
+//      ),
       suite("clientKill")(
         testM("error when a connection with the specifed address doesn't exist") {
           for {
