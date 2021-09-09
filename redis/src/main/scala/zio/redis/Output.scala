@@ -720,13 +720,18 @@ object Output {
   case object ClientInfoOutput extends Output[Chunk[ClientInfo]] {
     private def parseLong(s: String): Option[Long] =
       try Some(s.toLong)
-      catch { case _: NumberFormatException => None }
+      catch {
+        case _: NumberFormatException => None
+      }
 
     private def parseInt(s: String): Option[Int] =
       try Some(s.toInt)
-      catch { case _: NumberFormatException => None }
+      catch {
+        case _: NumberFormatException => None
+      }
 
-    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[ClientInfo] =
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[ClientInfo] = {
+      println("test")
       respValue match {
         case bulk @ RespValue.BulkString(_) if bulk.asString == "" => Chunk.empty
         case bulk @ RespValue.BulkString(_) =>
@@ -799,6 +804,7 @@ object Output {
           }
         case other => throw ProtocolError(s"$other isn't a bulk string")
       }
+    }
   }
 
   case object ClientTrackingInfoOutput extends Output[ClientTrackingInfo] {
