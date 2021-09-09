@@ -864,7 +864,7 @@ object OutputSpec extends BaseSpec {
           val id      = 42L
           val address = Address(InetAddress.getByName("127.0.0.1"), 800)
           val resp =
-            RespValue.bulkString(s"addr=${address.stringify} name= id=$id laddr=${address.stringify}")
+            RespValue.bulkString(s"addr=${address.stringify} id=$id laddr=${address.stringify}")
           for {
             res <- Task(ClientInfoOutput.unsafeDecode(resp))
           } yield assert(res)(
