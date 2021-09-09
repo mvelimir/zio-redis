@@ -1,6 +1,6 @@
 package zio.redis
 
-//import java.net.InetAddress
+import java.net.InetAddress
 
 import zio.Chunk
 import zio.duration._
@@ -718,87 +718,86 @@ object Output {
   }
 
   case object ClientInfoOutput extends Output[Chunk[ClientInfo]] {
-//    private def parseLong(s: String): Option[Long] =
-//      try Some(s.toLong)
-//      catch { case _: NumberFormatException => None }
-//
-//    private def parseInt(s: String): Option[Int] =
-//      try Some(s.toInt)
-//      catch { case _: NumberFormatException => None }
+    private def parseLong(s: String): Option[Long] =
+      try Some(s.toLong)
+      catch { case _: NumberFormatException => None }
+
+    private def parseInt(s: String): Option[Int] =
+      try Some(s.toInt)
+      catch { case _: NumberFormatException => None }
 
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[ClientInfo] =
       respValue match {
-        case _ => Chunk.empty
-//        case bulk @ RespValue.BulkString(_) if bulk.asString == "" => Chunk.empty
-//        case bulk @ RespValue.BulkString(_) =>
-//          val clients: List[Map[String, String]] = bulk.asString.split('\n').toList.map {
-//            _.split(' ').toList.map {
-//              _.split('=').toList match {
-//                case key :: value :: Nil => key -> value
-//                case other               => throw ProtocolError(s"Invalid text $other in client information")
-//              }
-//            }.toMap
-//          }
-//          Chunk.fromIterable(clients).map { client =>
-//            val flags: Set[ClientFlag] = client
-//              .get("flags")
-//              .map { s =>
-//                import ClientFlag._
-//                s.collect {
-//                  case 'A' => ToBeClosedAsap
-//                  case 'b' => Blocked
-//                  case 'c' => ToBeClosedAfterReply
-//                  case 'd' => WatchedKeysModified
-//                  case 'M' => IsMaster
-//                  case 'O' => MonitorMode
-//                  case 'P' => PubSub
-//                  case 'r' => ReadOnlyMode
-//                  case 'S' => Replica
-//                  case 'u' => Unblocked
-//                  case 'U' => UnixDomainSocket
-//                  case 'x' => MultiExecContext
-//                  case 't' => KeysTrackingEnabled
-//                  case 'R' => TrackingTargetClientInvalid
-//                  case 'B' => BroadcastTrackingMode
-//                }.toSet[ClientFlag]
-//              }
-//              .getOrElse(Set.empty)
-//            val events =
-//              client
-//                .get("events")
-//                .map(s => ClientEvents(readable = s.contains('r'), writable = s.contains('w')))
-//                .getOrElse(ClientEvents())
-//            ClientInfo(
-//              id = client.get("id").flatMap(parseLong).getOrElse(0L),
-//              name = client.get("name"),
-//              address = client.get("addr").map { str =>
-//                Address(InetAddress.getByName(str.split(':')(0)), str.split(':')(1).toInt)
-//              },
-//              localAddress = client.get("laddr").map { str =>
-//                Address(InetAddress.getByName(str.split(':')(0)), str.split(':')(1).toInt)
-//              },
-//              fileDescriptor = client.get("fd").flatMap(parseLong),
-//              age = client.get("age").flatMap(parseLong).map(_.seconds),
-//              idle = client.get("idle").flatMap(parseLong).map(_.seconds),
-//              flags = flags,
-//              databaseId = client.get("db").flatMap(parseLong),
-//              subscriptions = client.get("sub").flatMap(parseInt).getOrElse(0),
-//              patternSubscriptions = client.get("psub").flatMap(parseInt).getOrElse(0),
-//              multiCommands = client.get("multi").flatMap(parseInt).getOrElse(0),
-//              queryBufferLength = client.get("qbuf").flatMap(parseInt),
-//              queryBufferFree = client.get("qbuf-free").flatMap(parseInt),
-//              outputBufferLength = client.get("obl").flatMap(parseInt),
-//              outputListLength = client.get("oll").flatMap(parseInt),
-//              outputBufferMem = client.get("omem").flatMap(parseLong),
-//              events = events,
-//              lastCommand = client.get("cmd"),
-//              argvMemory = client.get("argv-mem").flatMap(parseLong),
-//              totalMemory = client.get("tot-mem").flatMap(parseLong),
-//              redirectionClientId = client.get("redir").flatMap(parseLong),
-//              user = client.get("user")
-//            )
-//          }
-//        case other => throw ProtocolError(s"$other isn't a bulk string")
+        case bulk @ RespValue.BulkString(_) if bulk.asString == "" => Chunk.empty
+        case bulk @ RespValue.BulkString(_) =>
+          val clients: List[Map[String, String]] = bulk.asString.split('\n').toList.map {
+            _.split(' ').toList.map {
+              _.split('=').toList match {
+                case key :: value :: Nil => key -> value
+                case other               => throw ProtocolError(s"Invalid text $other in client information")
+              }
+            }.toMap
+          }
+          Chunk.fromIterable(clients).map { client =>
+            val flags: Set[ClientFlag] = client
+              .get("flags")
+              .map { s =>
+                import ClientFlag._
+                s.collect {
+                  case 'A' => ToBeClosedAsap
+                  case 'b' => Blocked
+                  case 'c' => ToBeClosedAfterReply
+                  case 'd' => WatchedKeysModified
+                  case 'M' => IsMaster
+                  case 'O' => MonitorMode
+                  case 'P' => PubSub
+                  case 'r' => ReadOnlyMode
+                  case 'S' => Replica
+                  case 'u' => Unblocked
+                  case 'U' => UnixDomainSocket
+                  case 'x' => MultiExecContext
+                  case 't' => KeysTrackingEnabled
+                  case 'R' => TrackingTargetClientInvalid
+                  case 'B' => BroadcastTrackingMode
+                }.toSet[ClientFlag]
+              }
+              .getOrElse(Set.empty)
+            val events =
+              client
+                .get("events")
+                .map(s => ClientEvents(readable = s.contains('r'), writable = s.contains('w')))
+                .getOrElse(ClientEvents())
+            ClientInfo(
+              id = client.get("id").flatMap(parseLong).getOrElse(0L),
+              name = client.get("name"),
+              address = client.get("addr").map { str =>
+                Address(InetAddress.getByName(str.split(':')(0)), str.split(':')(1).toInt)
+              },
+              localAddress = client.get("laddr").map { str =>
+                Address(InetAddress.getByName(str.split(':')(0)), str.split(':')(1).toInt)
+              },
+              fileDescriptor = client.get("fd").flatMap(parseLong),
+              age = client.get("age").flatMap(parseLong).map(_.seconds),
+              idle = client.get("idle").flatMap(parseLong).map(_.seconds),
+              flags = flags,
+              databaseId = client.get("db").flatMap(parseLong),
+              subscriptions = client.get("sub").flatMap(parseInt).getOrElse(0),
+              patternSubscriptions = client.get("psub").flatMap(parseInt).getOrElse(0),
+              multiCommands = client.get("multi").flatMap(parseInt).getOrElse(0),
+              queryBufferLength = client.get("qbuf").flatMap(parseInt),
+              queryBufferFree = client.get("qbuf-free").flatMap(parseInt),
+              outputBufferLength = client.get("obl").flatMap(parseInt),
+              outputListLength = client.get("oll").flatMap(parseInt),
+              outputBufferMem = client.get("omem").flatMap(parseLong),
+              events = events,
+              lastCommand = client.get("cmd"),
+              argvMemory = client.get("argv-mem").flatMap(parseLong),
+              totalMemory = client.get("tot-mem").flatMap(parseLong),
+              redirectionClientId = client.get("redir").flatMap(parseLong),
+              user = client.get("user")
+            )
+          }
+        case other => throw ProtocolError(s"$other isn't a bulk string")
       }
   }
 
