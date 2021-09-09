@@ -1,8 +1,8 @@
 package zio.redis
 
-import java.net.InetAddress
+//import java.net.InetAddress
 
-import zio.Chunk
+//import zio.Chunk
 import zio.duration._
 import zio.test.Assertion._
 import zio.test.TestAspect._
