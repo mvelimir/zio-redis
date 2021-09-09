@@ -1,6 +1,6 @@
 package zio.redis
 
-import java.net.InetAddress
+//import java.net.InetAddress
 
 import zio.Chunk
 import zio.duration._
