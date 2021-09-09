@@ -729,6 +729,7 @@ object Output {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[ClientInfo] =
       respValue match {
         case bulk @ RespValue.BulkString(_) =>
+          println(bulk.asString)
           val clients: List[Map[String, String]] = bulk.asString.split('\n').toList.map {
             _.trim
               .split(' ')
