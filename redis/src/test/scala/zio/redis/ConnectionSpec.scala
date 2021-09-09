@@ -39,18 +39,18 @@ trait ConnectionSpec extends BaseSpec {
 //          } yield assert(id)(equalTo(expectedId))
 //        }
 //      ),
-//      suite("clientInfo")(
-//        testM("get client info") {
-//          for {
-//            info         <- clientInfo
-//            id            = info.id
-//            name          = info.name.getOrElse("")
-//            expectedId   <- clientId
-//            expectedName <- clientGetName
-//          } yield assert(id)(equalTo(expectedId)) &&
-//            assert(name)(equalTo(expectedName.getOrElse("")))
-//        }
-//      ),
+      suite("clientInfo")(
+        testM("get client info") {
+          for {
+            info         <- clientInfo
+            id            = info.id
+            name          = info.name.getOrElse("")
+            expectedId   <- clientId
+            expectedName <- clientGetName
+          } yield assert(id)(equalTo(expectedId)) &&
+            assert(name)(equalTo(expectedName.getOrElse("")))
+        }
+      ),
       suite("clientKill")(
         testM("error when a connection with the specifed address doesn't exist") {
           for {
