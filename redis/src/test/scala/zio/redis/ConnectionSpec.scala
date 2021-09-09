@@ -2,7 +2,7 @@ package zio.redis
 
 import java.net.InetAddress
 
-//import zio.Chunk
+import zio.Chunk
 import zio.duration._
 import zio.test.Assertion._
 import zio.test.TestAspect._
@@ -69,7 +69,7 @@ trait ConnectionSpec extends BaseSpec {
           } yield assert(clientsKilled)(equalTo(0L))
         }
       ),
-//      suite("clientList")(
+      suite("clientList")(
 //        testM("get client info") {
 //          for {
 //            id           <- clientId
@@ -77,12 +77,12 @@ trait ConnectionSpec extends BaseSpec {
 //            expectedInfo <- clientInfo
 //          } yield assert(infoChunk.head)(equalTo(expectedInfo))
 //        },
-//        testM("get empty chunk when no clients with specified ids exist") {
-//          for {
-//            emptyChunk <- clientList(76L, 77L, 78L)()
-//          } yield assert(emptyChunk)(equalTo(Chunk.empty))
-//        }
-//      ),
+        testM("get empty chunk when no clients with specified ids exist") {
+          for {
+            emptyChunk <- clientList(76L, 77L, 78L)()
+          } yield assert(emptyChunk)(equalTo(Chunk.empty))
+        }
+      ),
       suite("clientGetRedir")(
         testM("tracking disabled") {
           for {
