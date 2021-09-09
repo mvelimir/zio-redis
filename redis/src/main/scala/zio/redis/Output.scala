@@ -718,13 +718,13 @@ object Output {
   }
 
   case object ClientInfoOutput extends Output[Chunk[ClientInfo]] {
-    private def parseLong(s: String): Option[Long] =
-      try Some(s.toLong)
-      catch { case _: NumberFormatException => None }
-
-    private def parseInt(s: String): Option[Int] =
-      try Some(s.toInt)
-      catch { case _: NumberFormatException => None }
+//    private def parseLong(s: String): Option[Long] =
+//      try Some(s.toLong)
+//      catch { case _: NumberFormatException => None }
+//
+//    private def parseInt(s: String): Option[Int] =
+//      try Some(s.toInt)
+//      catch { case _: NumberFormatException => None }
 
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[ClientInfo] =
       respValue match {
