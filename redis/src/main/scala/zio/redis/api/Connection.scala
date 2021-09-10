@@ -116,8 +116,8 @@ trait Connection {
    */
   final def clientList(
     ids: Long*
-  )(clientType: Option[ClientType] = None): ZIO[RedisExecutor, RedisError, Unit] = {
-    val command = RedisCommand(ClientList, Tuple2(OptionalInput(ClientTypeInput), IdsInput), UnitOutput)
+  )(clientType: Option[ClientType] = None): ZIO[RedisExecutor, RedisError, Chunk[ClientInfo]] = {
+    val command = RedisCommand(ClientList, Tuple2(OptionalInput(ClientTypeInput), IdsInput), ClientInfoOutput)
 
     command.run((clientType, ids.toList))
   }
