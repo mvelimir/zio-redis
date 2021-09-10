@@ -23,7 +23,9 @@ object ApiSpec
     suite("Redis commands")(
       suite("Live Executor")(
         connectionSuite
-      ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live),
+      ).provideCustomLayerShared(
+        (Logging.consoleErr() ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live
+      ),
       suite("Test Executor")(
         connectionSuite
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(TestExecutorUnsupportedTag))
