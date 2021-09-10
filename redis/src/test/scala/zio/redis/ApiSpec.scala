@@ -23,6 +23,7 @@ object ApiSpec
     // scalafix:on
     suite("Redis commands")(
       suite("Live Executor")(
+        connectionSuite,
         keysSuite,
         listSuite,
         setsSuite,
@@ -31,8 +32,7 @@ object ApiSpec
         geoSuite,
         hyperLogLogSuite,
         hashSuite,
-        streamsSuite,
-        connectionSuite
+        streamsSuite
       ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live)
         @@ sequential,
       suite("Test Executor")(

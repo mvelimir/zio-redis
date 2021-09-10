@@ -89,7 +89,7 @@ trait Connection {
     clientSideCaching: Boolean,
     trackingMode: Option[ClientTrackingMode] = None,
     noLoop: Boolean = false,
-    caching: Option[Boolean],
+    caching: Option[Boolean] = None,
     brokenRedirect: Boolean = false
   )
 
