@@ -49,7 +49,7 @@ trait ConnectionSpec extends BaseSpec {
             expectedName <- clientGetName
           } yield assert(id)(equalTo(expectedId)) &&
             assert(name)(equalTo(expectedName.getOrElse("")))
-        } @@ ignore
+        } @@ eventually
       ),
       suite("clientKill")(
         testM("error when a connection with the specifed address doesn't exist") {
