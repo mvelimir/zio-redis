@@ -826,7 +826,7 @@ object Output {
                     case bulk @ RespValue.BulkString(_) => bulk.asString
                     case other                          => throw ProtocolError(s"$other isn't a string")
                   }.toSet
-                  println(set.foreach(print))
+                  set.foreach(print)
                   ClientTrackingFlags(
                     set.contains("on"),
                     set match {
