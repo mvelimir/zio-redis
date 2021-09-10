@@ -730,6 +730,7 @@ object Output {
       respValue match {
         case bulk @ RespValue.BulkString(_) if bulk.asString == "" => Chunk.empty
         case bulk @ RespValue.BulkString(_) =>
+          println(bulk.asString)
           val clients: List[Map[String, String]] = bulk.asString.split('\n').toList.map {
             _.trim
               .split(' ')
