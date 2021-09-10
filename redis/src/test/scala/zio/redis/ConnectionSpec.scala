@@ -10,7 +10,7 @@ import zio.test._
 
 trait ConnectionSpec extends BaseSpec {
 
-  val connectionSuite: Spec[Annotations with RedisExecutor with ZTestEnv, TestFailure[RedisError], TestSuccess] =
+  val connectionSuite: Spec[Annotations with RedisExecutor, TestFailure[RedisError], TestSuccess] =
     suite("connection")(
       suite("clientCaching")(
         testM("track keys") {
@@ -37,8 +37,8 @@ trait ConnectionSpec extends BaseSpec {
             info      <- clientInfo
             expectedId = info.id
           } yield assert(id)(equalTo(expectedId))
-        } @@ ignore
-      ),
+        }
+      ) @@ ignore,
       suite("clientInfo")(
         testM("get client info") {
           for {
@@ -49,8 +49,8 @@ trait ConnectionSpec extends BaseSpec {
             expectedName <- clientGetName
           } yield assert(id)(equalTo(expectedId)) &&
             assert(name)(equalTo(expectedName.getOrElse("")))
-        } @@ eventually
-      ),
+        }
+      ) @@ ignore,
       suite("clientKill")(
         testM("error when a connection with the specifed address doesn't exist") {
           for {
