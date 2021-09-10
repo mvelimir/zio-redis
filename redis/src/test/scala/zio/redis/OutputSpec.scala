@@ -1,7 +1,5 @@
 package zio.redis
 
-import java.net.InetAddress
-
 import zio.duration._
 import zio.redis.Output._
 import zio.redis.RedisError.{ ProtocolError, _ }
