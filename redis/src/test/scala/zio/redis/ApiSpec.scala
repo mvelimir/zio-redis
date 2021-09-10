@@ -4,6 +4,7 @@ import zio.ZLayer
 import zio.clock.Clock
 import zio.logging.Logging
 import zio.test._
+import zio.test.TestAspect._
 
 object ApiSpec
     extends ConnectionSpec
@@ -32,7 +33,8 @@ object ApiSpec
         hashSuite,
         streamsSuite,
         connectionSuite
-      ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live),
+      ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live)
+        @@ sequential,
       suite("Test Executor")(
 //        connectionSuite,
         setsSuite,
