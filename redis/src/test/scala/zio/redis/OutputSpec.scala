@@ -919,108 +919,108 @@ object OutputSpec extends BaseSpec {
           )
         }
       ),
-      suite("ClientTrackingInfo")(
-        testM("extract with tracking off") {
-          val resp = RespValue
-            .array(
-              RespValue.bulkString("flags"),
-              RespValue.array(RespValue.bulkString("off")),
-              RespValue.bulkString("redirect"),
-              RespValue.Integer(-1L),
-              RespValue.bulkString("prefixes"),
-              RespValue.NullArray
-            )
-          val expectedInfo = ClientTrackingInfo(
-            ClientTrackingFlags(
-              clientSideCaching = false
-            ),
-            ClientTrackingRedirect.NotEnabled
-          )
-          for {
-            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
-          } yield assert(res)(equalTo(expectedInfo))
-        },
-        testM("extract with flags set") {
-          val resp = RespValue
-            .array(
-              RespValue.bulkString("flags"),
-              RespValue.array(
-                RespValue.bulkString("on"),
-                RespValue.bulkString("optin"),
-                RespValue.bulkString("caching-yes"),
-                RespValue.bulkString("noloop")
-              ),
-              RespValue.bulkString("redirect"),
-              RespValue.Integer(0L),
-              RespValue.bulkString("prefixes"),
-              RespValue.NullArray
-            )
-          val expectedInfo = ClientTrackingInfo(
-            ClientTrackingFlags(
-              clientSideCaching = true,
-              trackingMode = Some(ClientTrackingMode.OptIn),
-              noLoop = true,
-              caching = Some(true)
-            ),
-            ClientTrackingRedirect.NotRedirected
-          )
-          for {
-            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
-          } yield assert(res)(equalTo(expectedInfo))
-        },
-        testM("extract with redirect id and broken redirect flag") {
-          val resp = RespValue
-            .array(
-              RespValue.bulkString("flags"),
-              RespValue.array(RespValue.bulkString("on"), RespValue.bulkString("broken_redirect")),
-              RespValue.bulkString("redirect"),
-              RespValue.Integer(42L),
-              RespValue.bulkString("prefixes"),
-              RespValue.NullArray
-            )
-          val expectedInfo = ClientTrackingInfo(
-            ClientTrackingFlags(clientSideCaching = true, brokenRedirect = true),
-            ClientTrackingRedirect.RedirectedTo(42L)
-          )
-          for {
-            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
-          } yield assert(res)(equalTo(expectedInfo))
-        },
-        testM("extract with specified prefixes") {
-          val resp = RespValue
-            .array(
-              RespValue.bulkString("flags"),
-              RespValue.array(RespValue.bulkString("on"), RespValue.bulkString("bcast")),
-              RespValue.bulkString("redirect"),
-              RespValue.Integer(0L),
-              RespValue.bulkString("prefixes"),
-              RespValue.array(
-                RespValue.bulkString("prefix1"),
-                RespValue.bulkString("prefix2"),
-                RespValue.bulkString("prefix3")
-              )
-            )
-          val expectedInfo = ClientTrackingInfo(
-            ClientTrackingFlags(clientSideCaching = true, trackingMode = Some(ClientTrackingMode.Broadcast)),
-            ClientTrackingRedirect.NotRedirected,
-            Set("prefix1", "prefix2", "prefix3")
-          )
-          for {
-            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
-          } yield assert(res)(equalTo(expectedInfo))
-        },
-        testM("error when fields are missing") {
-          val resp = RespValue
-            .array(
-              RespValue.bulkString("redirect"),
-              RespValue.Integer(42L),
-              RespValue.bulkString("prefixes"),
-              RespValue.NullArray
-            )
-          Task(ClientTrackingInfoOutput.unsafeDecode(resp)).either
-            .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
-        }
-      ),
+//      suite("ClientTrackingInfo")(
+//        testM("extract with tracking off") {
+//          val resp = RespValue
+//            .array(
+//              RespValue.bulkString("flags"),
+//              RespValue.array(RespValue.bulkString("off")),
+//              RespValue.bulkString("redirect"),
+//              RespValue.Integer(-1L),
+//              RespValue.bulkString("prefixes"),
+//              RespValue.NullArray
+//            )
+//          val expectedInfo = ClientTrackingInfo(
+//            ClientTrackingFlags(
+//              clientSideCaching = false
+//            ),
+//            ClientTrackingRedirect.NotEnabled
+//          )
+//          for {
+//            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+//          } yield assert(res)(equalTo(expectedInfo))
+//        },
+//        testM("extract with flags set") {
+//          val resp = RespValue
+//            .array(
+//              RespValue.bulkString("flags"),
+//              RespValue.array(
+//                RespValue.bulkString("on"),
+//                RespValue.bulkString("optin"),
+//                RespValue.bulkString("caching-yes"),
+//                RespValue.bulkString("noloop")
+//              ),
+//              RespValue.bulkString("redirect"),
+//              RespValue.Integer(0L),
+//              RespValue.bulkString("prefixes"),
+//              RespValue.NullArray
+//            )
+//          val expectedInfo = ClientTrackingInfo(
+//            ClientTrackingFlags(
+//              clientSideCaching = true,
+//              trackingMode = Some(ClientTrackingMode.OptIn),
+//              noLoop = true,
+//              caching = Some(true)
+//            ),
+//            ClientTrackingRedirect.NotRedirected
+//          )
+//          for {
+//            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+//          } yield assert(res)(equalTo(expectedInfo))
+//        },
+//        testM("extract with redirect id and broken redirect flag") {
+//          val resp = RespValue
+//            .array(
+//              RespValue.bulkString("flags"),
+//              RespValue.array(RespValue.bulkString("on"), RespValue.bulkString("broken_redirect")),
+//              RespValue.bulkString("redirect"),
+//              RespValue.Integer(42L),
+//              RespValue.bulkString("prefixes"),
+//              RespValue.NullArray
+//            )
+//          val expectedInfo = ClientTrackingInfo(
+//            ClientTrackingFlags(clientSideCaching = true, brokenRedirect = true),
+//            ClientTrackingRedirect.RedirectedTo(42L)
+//          )
+//          for {
+//            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+//          } yield assert(res)(equalTo(expectedInfo))
+//        },
+//        testM("extract with specified prefixes") {
+//          val resp = RespValue
+//            .array(
+//              RespValue.bulkString("flags"),
+//              RespValue.array(RespValue.bulkString("on"), RespValue.bulkString("bcast")),
+//              RespValue.bulkString("redirect"),
+//              RespValue.Integer(0L),
+//              RespValue.bulkString("prefixes"),
+//              RespValue.array(
+//                RespValue.bulkString("prefix1"),
+//                RespValue.bulkString("prefix2"),
+//                RespValue.bulkString("prefix3")
+//              )
+//            )
+//          val expectedInfo = ClientTrackingInfo(
+//            ClientTrackingFlags(clientSideCaching = true, trackingMode = Some(ClientTrackingMode.Broadcast)),
+//            ClientTrackingRedirect.NotRedirected,
+//            Set("prefix1", "prefix2", "prefix3")
+//          )
+//          for {
+//            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+//          } yield assert(res)(equalTo(expectedInfo))
+//        },
+//        testM("error when fields are missing") {
+//          val resp = RespValue
+//            .array(
+//              RespValue.bulkString("redirect"),
+//              RespValue.Integer(42L),
+//              RespValue.bulkString("prefixes"),
+//              RespValue.NullArray
+//            )
+//          Task(ClientTrackingInfoOutput.unsafeDecode(resp)).either
+//            .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+//        }
+//      ),
       suite("ClientTrackingRedirect")(
         testM("extract not enabled") {
           val resp = RespValue.Integer(-1L)
