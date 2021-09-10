@@ -817,7 +817,7 @@ object Output {
               case other                                            => throw ProtocolError(s"$other isn't a valid format")
             }
             .toMap
-          ClientTrackingInfo(
+          val trackingInfo = ClientTrackingInfo(
             fields
               .get("flags")
               .map {
@@ -868,6 +868,8 @@ object Output {
               }
               .getOrElse(throw ProtocolError("Missing prefixes field"))
           )
+          println("caching: " + trackingInfo.flags.caching)
+          trackingInfo
         case array @ RespValue.Array(_) => throw ProtocolError(s"$array doesn't have an even number of elements")
         case other                      => throw ProtocolError(s"$other isn't an array")
       }
