@@ -1,7 +1,5 @@
 package zio.redis
 
-import java.net.InetAddress
-
 import zio.Chunk
 import zio.duration._
 import zio.schema.Schema
