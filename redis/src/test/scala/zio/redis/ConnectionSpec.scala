@@ -5,7 +5,6 @@ import java.net.InetAddress
 import zio.Chunk
 import zio.duration._
 import zio.test.Assertion._
-import zio.test.TestAspect._
 import zio.test._
 
 trait ConnectionSpec extends BaseSpec {
@@ -203,5 +202,5 @@ trait ConnectionSpec extends BaseSpec {
           unit <- reset
         } yield assert(unit)(isUnit)
       }
-    ) @@ sequential
+    )
 }
