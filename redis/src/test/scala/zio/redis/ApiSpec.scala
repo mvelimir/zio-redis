@@ -24,7 +24,7 @@ object ApiSpec
       suite("Live Executor")(
         connectionSuite
       ).provideCustomLayerShared(
-        (Logging.consoleErr() ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live
+        (Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live
       ),
       suite("Test Executor")(
         connectionSuite
