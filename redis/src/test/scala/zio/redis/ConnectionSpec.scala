@@ -20,15 +20,15 @@ trait ConnectionSpec extends BaseSpec {
             _            <- clientCaching(true)
             trackingInfo <- clientTrackingInfo
           } yield assert(trackingInfo.flags.caching)(isSome(isTrue))
-        },
-        testM("don't track keys") {
-          for {
-            _            <- clientTrackingOff
-            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
-            _            <- clientCaching(false)
-            trackingInfo <- clientTrackingInfo
-          } yield assert(trackingInfo.flags.caching)(isSome(isFalse))
         }
+//        testM("don't track keys") {
+//          for {
+//            _            <- clientTrackingOff
+//            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
+//            _            <- clientCaching(false)
+//            trackingInfo <- clientTrackingInfo
+//          } yield assert(trackingInfo.flags.caching)(isSome(isFalse))
+//        }
       ),
 //      suite("clientId")(
 //        testM("get client id") {
