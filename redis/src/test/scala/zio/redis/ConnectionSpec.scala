@@ -15,17 +15,17 @@ trait ConnectionSpec extends BaseSpec {
       suite("clientCaching")(
         testM("track keys") {
           for {
-            _ <- clientTrackingOff
-            _ <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
-            //_            <- clientCaching(true)
+            _            <- clientTrackingOff
+            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
+            _            <- clientCaching(true)
             trackingInfo <- clientTrackingInfo
           } yield assert(trackingInfo.flags.caching)(isSome(isTrue))
         },
         testM("don't track keys") {
           for {
-            _ <- clientTrackingOff
-            _ <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
-            //_            <- clientCaching(false)
+            _            <- clientTrackingOff
+            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
+            _            <- clientCaching(false)
             trackingInfo <- clientTrackingInfo
           } yield assert(trackingInfo.flags.caching)(isSome(isFalse))
         }
@@ -163,9 +163,9 @@ trait ConnectionSpec extends BaseSpec {
 //        },
         testM("get tracking info when tracking is enabled in optin mode with noloop and caching on") {
           for {
-            _ <- clientTrackingOff
-            _ <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn), noLoop = true)
-            // _            <- clientCaching(true)
+            _            <- clientTrackingOff
+            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn), noLoop = true)
+            _            <- clientCaching(true)
             trackingInfo <- clientTrackingInfo
           } yield assert(trackingInfo)(
             equalTo(

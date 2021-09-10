@@ -34,7 +34,7 @@ object ApiSpec
         streamsSuite
       ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live),
       suite("Test Executor")(
-        connectionSuite,
+//        connectionSuite,
         setsSuite,
         hyperLogLogSuite,
         listSuite,
