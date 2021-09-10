@@ -10,7 +10,7 @@ import zio.test._
 
 trait ConnectionSpec extends BaseSpec {
 
-  val connectionSuite: Spec[Annotations with RedisExecutor, TestFailure[RedisError], TestSuccess] =
+  val connectionSuite: Spec[Annotations with RedisExecutor with ZTestEnv, TestFailure[RedisError], TestSuccess] =
     suite("connection")(
       suite("clientCaching")(
         testM("track keys") {
