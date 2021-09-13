@@ -99,23 +99,41 @@ private[redis] final class TestExecutor private (
       case api.Geo.GeoAdd =>
         val key = input.head.asString
 
-        val values =
+        val members =
           Chunk.fromIterator(
             input.tail
               .map(_.asString)
               .grouped(3)
-              .map(g => MemberScore(GeoHash.encodeAsDouble(g(0).toDouble, g(1).toDouble), g(2)))
+              .map(g => MemberScore(Hash.encodeAsHash(g(0).toDouble, g(1).toDouble), g(2)))
           )
 
         orWrongType(isSortedSet(key))(
           for {
-            oldSet     <- sortedSets.getOrElse(key, Map.empty)
-            valuesAdded = values.count(ms => oldSet.contains(ms.member))
-            newSet      = oldSet ++ values.map(ms => (ms.member, ms.score)).toMap
-            _          <- sortedSets.put(key, newSet)
-          } yield RespValue.Integer(valuesAdded)
+            scoreMap    <- sortedSets.getOrElse(key, Map.empty)
+            membersAdded = members.count(ms => scoreMap.contains(ms.member))
+            newScoreMap  = scoreMap ++ members.map(ms => (ms.member, ms.score)).toMap
+            _           <- sortedSets.put(key, newScoreMap)
+          } yield RespValue.Integer(membersAdded)
         )
 
+      case api.Geo.GeoPos =>
+        val key     = input.head.asString
+        val members = input.tail.map(_.asString)
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            m         = members collect scoreMap
+          } yield RespValue.Array(
+            m.map { hash =>
+              val longLat = Hash.decodeHash(hash.toLong)
+              RespValue.array(
+                RespValue.bulkString(longLat.longitude.toString),
+                RespValue.bulkString(longLat.latitude.toString)
+              )
+            }
+          )
+        )
       case api.Sets.SAdd =>
         val key = input.head.asString
         orWrongType(isSet(key))(
@@ -2257,46 +2275,56 @@ private[redis] final class TestExecutor private (
     } yield result
   }
 
-  private[this] object GeoHash {
-    val longRange = (-180.0, 180.0)
-    val latRange  = (-85.05112878, 85.05112878)
+  private[this] object Hash {
+    val longRange: (Double, Double) = (-180.0, 180.0)
+    val latRange: (Double, Double)  = (-85.05112878, 85.05112878)
 
-    def encodeAsLong(longitude: Double, latitude: Double, precision: Int = 11): Long = {
+    def encodeAsHash(
+      longitude: Double,
+      latitude: Double,
+      longRange: (Double, Double) = longRange,
+      latRange: (Double, Double) = latRange
+    ): Long = {
 
       @annotation.tailrec
-      def findLong(acc: Long, latBounds: (Double, Double), longBounds: (Double, Double), bits: Int): Long =
+      def findHash(acc: Long, longBounds: (Double, Double), latBounds: (Double, Double), bits: Int): Long =
         if (bits == 0) acc
         else if (bits % 2 == 1) {
           val latMid = (latBounds._1 + latBounds._2) / 2.0
-          if (latitude >= latMid) findLong(1 | 2 * acc, (latMid, latBounds._2), longBounds, bits - 1)
-          else findLong(2 * acc, (latBounds._1, latMid), longBounds, bits - 1)
+          if (latitude >= latMid) findHash(1 | 2 * acc, (latMid, latBounds._2), longBounds, bits - 1)
+          else findHash(2 * acc, (latBounds._1, latMid), longBounds, bits - 1)
         } else {
           val longMid = (longBounds._1 + longBounds._2) / 2.0
-          if (longitude >= longMid) findLong(1 | 2 * acc, latBounds, (longMid, longBounds._2), bits - 1)
-          else findLong(2 * acc, latBounds, (longBounds._1, longMid), bits - 1)
+          if (longitude >= longMid) findHash(1 | 2 * acc, latBounds, (longMid, longBounds._2), bits - 1)
+          else findHash(2 * acc, latBounds, (longBounds._1, longMid), bits - 1)
         }
 
-      findLong(0, latRange, longRange, 52)
+      findHash(0, longRange, latRange, 52)
     }
 
-    def asGeoHash(value: Long): String = ???
+    def asGeoHash(hash: Long): String = {
+      val base32       = "0123456789bcdefghjkmnpqrstuvwxyz"
+      val longLat      = decodeHash(hash)
+      val standardHash = encodeAsHash(longLat.longitude, longLat.latitude, latRange = (-90.0, 90.0))
+      standardHash.toBinaryString.grouped(5).map(x => base32(Integer.parseInt(x, 2))).mkString
+    }
 
-    def decodeLong(value: Long): LongLat = {
+    def decodeHash(hash: Long): LongLat = {
 
       @annotation.tailrec
-      def findLongLat(latBounds: (Double, Double), longBounds: (Double, Double), bitPlace: Int): LongLat =
+      def findLongLat(longBounds: (Double, Double), latBounds: (Double, Double), bitPlace: Int): LongLat =
         if (bitPlace < 0) LongLat((longBounds._1 + longBounds._2) / 2.0, (latBounds._1 + latBounds._2) / 2.0)
         else if (bitPlace % 2 == 0) {
           val latMid = (latBounds._1 + latBounds._2) / 2.0
-          if (value & 1 << bitPlace != 1) findLongLat((latMid, latBounds._2), longBounds, bitPlace - 1)
-          else findLongLat((latBounds._1, latMid), longBounds, bitPlace - 1)
+          if (hash & 1 << bitPlace != 1) findLongLat(longBounds, (latMid, latBounds._2), bitPlace - 1)
+          else findLongLat(longBounds, (latBounds._1, latMid), bitPlace - 1)
         } else {
           val longMid = (longBounds._1 + longBounds._2) / 2.0
-          if (value & 1 << bitPlace != 1) findLongLat(latBounds, (longMid, longBounds._2), bitPlace - 1)
-          else findLongLat(latBounds, (longBounds._1, longMid), bitPlace - 1)
+          if (hash & 1 << bitPlace != 1) findLongLat((longMid, longBounds._2), latBounds, bitPlace - 1)
+          else findLongLat((longBounds._1, longMid), latBounds, bitPlace - 1)
         }
 
-      findLongLat(latRange, longRange, 51)
+      findLongLat(longRange, latRange, 51)
     }
   }
 
