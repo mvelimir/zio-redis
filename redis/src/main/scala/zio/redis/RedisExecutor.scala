@@ -75,6 +75,7 @@ object RedisExecutor {
         }
 
         val bytes = buffer.result()
+        println(bytes)
 
         byteStream
           .write(bytes)
