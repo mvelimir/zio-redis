@@ -70,6 +70,7 @@ object RedisExecutor {
 
         while (it.hasNext) {
           val req = it.next()
+          println(req.command + "a")
           buffer ++= RespValue.Array(req.command).serialize
         }
 
