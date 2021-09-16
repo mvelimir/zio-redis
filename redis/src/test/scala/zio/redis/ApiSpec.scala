@@ -3,6 +3,7 @@ package zio.redis
 import zio.ZLayer
 import zio.clock.Clock
 import zio.logging.Logging
+Import zio.test._
 
 object ApiSpec
     extends ConnectionSpec
