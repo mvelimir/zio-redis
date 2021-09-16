@@ -10,7 +10,7 @@ trait Connection {
   import Connection._
 
   /**
-   * Authenticates the current connection to the server in two cases:
+   * Authenticates the the current connection to the server in two cases:
    *  - If the Redis server is password protected via the the ''requirepass'' option
    *  - If a Redis 6.0 instance, or greater, is using the [[https://redis.io/topics/acl Redis ACL system]]. In this case
    *  it is assumed that the implicit username is ''default''.
