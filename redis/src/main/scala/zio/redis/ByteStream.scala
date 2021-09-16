@@ -57,7 +57,7 @@ private[redis] object ByteStream {
         logger <- ZIO.service[Logger[String]]
         channel <- IO.effect {
                      val channel = AsynchronousSocketChannel.open()
-                     channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
+
                      channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
                      channel
                    }
