@@ -70,7 +70,7 @@ object RedisExecutor {
 
         while (it.hasNext) {
           val req = it.next()
-          println(req.command + "a")
+          println(req.command)
           buffer ++= RespValue.Array(req.command).serialize
         }
 
@@ -89,7 +89,10 @@ object RedisExecutor {
       byteStream.read
         .mapError(RedisError.IOError)
         .transduce(RespValue.Decoder)
-        .foreach(response => resQueue.take.flatMap(_.succeed(response)))
+        .foreach { response => 
+          println(response)
+          resQueue.take.flatMap(_.succeed(response))
+        }
 
   }
 }
