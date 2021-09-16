@@ -23,7 +23,7 @@ object RedisExecutor {
 
   private[this] final val True: Any => Boolean = _ => true
 
-  private[this] final val RequestQueueSize = 16
+  private[this] final val RequestQueueSize = 64
 
   private[this] final val StreamedExecutor =
     ZLayer
