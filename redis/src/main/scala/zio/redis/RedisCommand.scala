@@ -9,9 +9,15 @@ final class RedisCommand[-In, +Out] private (val name: String, val input: Input[
       .accessM[RedisExecutor] { executor =>
         val service = executor.get
         val codec   = service.codec
-        println(name)
+        val isInfo = name == "CLIENT INFO"
+        if (isInfo) {
+          println(name)
+        }
         val command = Varargs(StringInput).encode(name.split(" "))(codec) ++ input.encode(in)(codec)
-        service.execute(command).flatMap[Any, Throwable, Out](out => ZIO.effect(output.unsafeDecode(out)(codec)))
+        service.execute(command).flatMap[Any, Throwable, Out](out => {
+          if (isInfo) println("tpt")
+          ZIO.effect(output.unsafeDecode(out)(codec)))
+        }
       }
       .refineToOrDie[RedisError]
 }
