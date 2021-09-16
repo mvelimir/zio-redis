@@ -16,8 +16,9 @@ final class RedisCommand[-In, +Out] private (val name: String, val input: Input[
         val command = Varargs(StringInput).encode(name.split(" "))(codec) ++ input.encode(in)(codec)
         service.execute(command).flatMap[Any, Throwable, Out](out => {
           if (isInfo) println("tpt")
-          ZIO.effect(output.unsafeDecode(out)(codec)))
+          ZIO.effect(output.unsafeDecode(out)(codec))
         }
+        )
       }
       .refineToOrDie[RedisError]
 }
