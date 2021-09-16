@@ -4,7 +4,6 @@ import zio.ZLayer
 import zio.clock.Clock
 import zio.logging.Logging
 import zio.test.TestAspect._
-import zio.test._
 
 object ApiSpec
     extends ConnectionSpec
