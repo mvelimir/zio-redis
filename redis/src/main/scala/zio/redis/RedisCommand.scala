@@ -9,6 +9,7 @@ final class RedisCommand[-In, +Out] private (val name: String, val input: Input[
       .accessM[RedisExecutor] { executor =>
         val service = executor.get
         val codec   = service.codec
+        println(name)
         val command = Varargs(StringInput).encode(name.split(" "))(codec) ++ input.encode(in)(codec)
         service.execute(command).flatMap[Any, Throwable, Out](out => ZIO.effect(output.unsafeDecode(out)(codec)))
       }
