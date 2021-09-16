@@ -32,7 +32,7 @@ private[redis] object ByteStream {
       channel     <- openChannel(address)
     } yield new Connection(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError)
 
-  private[this] final val ResponseBufferSize = 1024
+  private[this] final val ResponseBufferSize = 16384
 
   private[this] def completionHandler[A](k: IO[IOException, A] => Unit): CompletionHandler[A, Any] =
     new CompletionHandler[A, Any] {
@@ -57,7 +57,7 @@ private[redis] object ByteStream {
         logger <- ZIO.service[Logger[String]]
         channel <- IO.effect {
                      val channel = AsynchronousSocketChannel.open()
-                     channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
+
                      channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
                      channel
                    }

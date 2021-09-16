@@ -23,7 +23,7 @@ object RedisExecutor {
 
   private[this] final val True: Any => Boolean = _ => true
 
-  private[this] final val RequestQueueSize = 16
+  private[this] final val RequestQueueSize = 64
 
   private[this] final val StreamedExecutor =
     ZLayer
@@ -70,10 +70,12 @@ object RedisExecutor {
 
         while (it.hasNext) {
           val req = it.next()
+          println(req.command)
           buffer ++= RespValue.Array(req.command).serialize
         }
 
         val bytes = buffer.result()
+        println(bytes)
 
         byteStream
           .write(bytes)
@@ -84,11 +86,16 @@ object RedisExecutor {
           )
       }
 
-    private def receive: IO[RedisError, Unit] =
+    private def receive: IO[RedisError, Unit] = {
+      println("receive")
       byteStream.read
         .mapError(RedisError.IOError)
         .transduce(RespValue.Decoder)
-        .foreach(response => resQueue.take.flatMap(_.succeed(response)))
+        .foreach { response => 
+          println(response)
+          resQueue.take.flatMap(_.succeed(response))
+        }
+      }
 
   }
 }
