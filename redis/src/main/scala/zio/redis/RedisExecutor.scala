@@ -86,7 +86,8 @@ object RedisExecutor {
           )
       }
 
-    private def receive: IO[RedisError, Unit] =
+    private def receive: IO[RedisError, Unit] = {
+      println("receive")
       byteStream.read
         .mapError(RedisError.IOError)
         .transduce(RespValue.Decoder)
@@ -94,6 +95,7 @@ object RedisExecutor {
           println(response)
           resQueue.take.flatMap(_.succeed(response))
         }
+      }
 
   }
 }
