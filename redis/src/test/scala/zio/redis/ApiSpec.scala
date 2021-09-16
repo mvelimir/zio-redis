@@ -34,16 +34,6 @@ object ApiSpec
         //hashSuite,
         //streamsSuite
       ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live)
-        @@ sequential,
-      suite("Test Executor")(
-//      connectionSuite,
-        //setsSuite,
-        //hyperLogLogSuite,
-        //listSuite,
-        //hashSuite,
-        sortedSetsSuite
-      ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(TestExecutorUnsupportedTag))
-        .get
-        .provideCustomLayerShared(RedisExecutor.test ++ Clock.live)
+        @@ sequential
     )
 }
