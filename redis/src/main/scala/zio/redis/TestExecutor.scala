@@ -193,12 +193,9 @@ private[redis] final class TestExecutor private (
       case api.Connection.ClientSetName =>
         val nameOption = input.headOption.map(_.asString)
 
-        nameOption.fold(STM.succeed(RespValue.Error("ERR unknow command"))) { name =>
-          clientInfo.put("name", name).map(RespValue.SimpleString("OK"))
+        nameOption.fold[STM[Nothing, RespValue]](STM.succeed(RespValue.Error("ERR unknown command"))) { name =>
+          clientInfo.put("name", name).map(_ => RespValue.SimpleString("OK"))
         }
-        for {
-          _ <- clientInfo.put("name", name)
-        } yield RespValue.SimpleString("OK")
 
       case api.Connection.ClientTracking =>
         val inputList = input.toList.map(_.asString)
