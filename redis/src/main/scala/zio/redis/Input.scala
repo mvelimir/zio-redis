@@ -119,7 +119,7 @@ object Input {
 
   case object ClientTrackingInput
       extends Input[Option[(Option[Long], Option[ClientTrackingMode], Boolean, Chunk[String])]] {
-    override private[redis] def encode(
+    def encode(
       data: Option[(Option[Long], Option[ClientTrackingMode], Boolean, Chunk[String])]
     )(implicit codec: Codec): Chunk[RespValue.BulkString] =
       data match {

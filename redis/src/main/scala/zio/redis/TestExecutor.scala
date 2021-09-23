@@ -116,14 +116,10 @@ private[redis] final class TestExecutor private (
         }
 
       case api.Connection.ClientId =>
-        for {
-          id <- clientInfo.get("id")
-        } yield RespValue.Integer(id.get.toLong)
+        clientInfo.get("id").map(id => RespValue.Integer(id.get.toLong))
 
       case api.Connection.ClientInfo =>
-        for {
-          info <- clientInfo.fold("")((z, a) => s"$z ${a._1}=${a._2}")
-        } yield RespValue.bulkString(info)
+        clientInfo.fold("")((z, a) => s"$z ${a._1}=${a._2}").map(RespValue.bulkString)
 
       case api.Connection.ClientKill =>
         if (input.length == 1) {
@@ -161,10 +157,7 @@ private[redis] final class TestExecutor private (
               case _ => STM.succeed(true)
             }.fold(STM.succeed(true))((a, b) => a.flatMap(x => b.map(y => x && y)))
               .map(bool => RespValue.Integer(if (bool) 1 else 0))
-          } else
-            STM.succeedNow {
-              RespValue.Integer(0)
-            }
+          } else STM.succeedNow(RespValue.Integer(0))
         }
 
       case api.Connection.ClientList =>
@@ -192,17 +185,17 @@ private[redis] final class TestExecutor private (
         clientTrackingInfo.get("redirect").map(redir => RespValue.Integer(redir.get.head.toLong))
 
       case api.Connection.ClientUnpause =>
-        STM.succeedNow {
-          RespValue.SimpleString("OK")
-        }
+        STM.succeedNow(RespValue.SimpleString("OK"))
 
       case api.Connection.ClientPause =>
-        STM.succeedNow {
-          RespValue.SimpleString("OK")
-        }
+        STM.succeedNow(RespValue.SimpleString("OK"))
 
       case api.Connection.ClientSetName =>
-        val name = input.head.asString
+        val nameOption = input.headOption.map(_.asString)
+
+        nameOption.fold(STM.succeed(RespValue.Error("ERR unknow command"))) { name =>
+          clientInfo.put("name", name).map(RespValue.SimpleString("OK"))
+        }
         for {
           _ <- clientInfo.put("name", name)
         } yield RespValue.SimpleString("OK")

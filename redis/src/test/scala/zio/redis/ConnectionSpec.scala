@@ -1,9 +1,11 @@
 package zio.redis
 
 import java.net.InetAddress
-
-import zio.Chunk
+import zio.{ Chunk, ZLayer }
 import zio.duration._
+import zio.logging.Logging
+import zio.redis.codec.StringUtf8Codec
+import zio.schema.codec.Codec
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
@@ -42,25 +44,21 @@ trait ConnectionSpec extends BaseSpec {
       suite("clientInfo")(
         testM("get client info") {
           for {
-            info         <- clientInfo
+            info         <- clientInfo.provideLayer(ConnectionSpec.SecondExecutor)
             id            = info.id
             name          = info.name.getOrElse("")
-            expectedId   <- clientId
-            expectedName <- clientGetName
+            expectedId   <- clientId.provideLayer(ConnectionSpec.SecondExecutor)
+            expectedName <- clientGetName.provideLayer(ConnectionSpec.SecondExecutor)
           } yield assert(id)(equalTo(expectedId)) &&
             assert(name)(equalTo(expectedName.getOrElse("")))
         }
-      ) @@ ignore,
+      ),
       suite("clientKill")(
         testM("error when a connection with the specifed address doesn't exist") {
-          for {
-            error <- clientKill(Address(InetAddress.getByName("0.0.0.0"), 0)).either
-          } yield assert(error)(isLeft)
+          clientKill(Address(InetAddress.getByName("0.0.0.0"), 0)).either.map(assert(_)(isLeft))
         },
         testM("specify filters that don't kill the connection") {
-          for {
-            clientsKilled <- clientKill(ClientKillFilter.SkipMe(false), ClientKillFilter.Id(3341L))
-          } yield assert(clientsKilled)(equalTo(0L))
+          clientKill(ClientKillFilter.SkipMe(false), ClientKillFilter.Id(3341L)).map(assert(_)(equalTo(0L)))
         },
         testM("specify filters that kill the connection but skipme is enabled") {
           for {
@@ -76,11 +74,9 @@ trait ConnectionSpec extends BaseSpec {
             infoChunk    <- clientList(id)()
             expectedInfo <- clientInfo
           } yield assert(infoChunk.head)(equalTo(expectedInfo))
-        } @@ ignore,
+        }, // @@ ignore,
         testM("get empty chunk when no clients with specified ids exist") {
-          for {
-            emptyChunk <- clientList(76L, 77L, 78L)()
-          } yield assert(emptyChunk)(equalTo(Chunk.empty))
+          clientList(76L, 77L, 78L)().map(assert(_)(equalTo(Chunk.empty)))
         }
       ),
       suite("clientGetRedir")(
@@ -92,6 +88,7 @@ trait ConnectionSpec extends BaseSpec {
         },
         testM("tracking enabled but not redirecting") {
           for {
+            _     <- clientTrackingOff
             _     <- clientTrackingOn()
             redir <- clientGetRedir
           } yield assert(redir)(equalTo(ClientTrackingRedirect.NotRedirected))
@@ -99,14 +96,10 @@ trait ConnectionSpec extends BaseSpec {
       ),
       suite("client pause and unpause")(
         testM("clientPause") {
-          for {
-            unit <- clientPause(1.second, Some(ClientPauseMode.All))
-          } yield assert(unit)(isUnit)
+          clientPause(1.second, Some(ClientPauseMode.All)).map(assert(_)(isUnit))
         },
         testM("clientUnpause") {
-          for {
-            unit <- clientUnpause
-          } yield assert(unit)(isUnit)
+          clientUnpause.map(assert(_)(isUnit))
         }
       ),
       suite("set and get name")(
@@ -199,9 +192,14 @@ trait ConnectionSpec extends BaseSpec {
         }
       ),
       testM("reset") {
-        for {
-          unit <- reset
-        } yield assert(unit)(isUnit)
+        reset.map(assert(_)(isUnit))
       }
     ) @@ sequential
+}
+
+object ConnectionSpec {
+  final val SecondExecutor: ZLayer[Any, RedisError.IOError, RedisExecutor] =
+    (Logging.ignore ++
+      ZLayer.succeed(RedisConfig("localhost", 6380)) ++
+      ZLayer.succeed[Codec](StringUtf8Codec) >>> RedisExecutor.live).fresh
 }
