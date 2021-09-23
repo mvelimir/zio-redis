@@ -95,6 +95,7 @@ private[redis] object ByteStream {
 
     def write(chunk: Chunk[Byte]): IO[IOException, Unit] =
       IO.when(chunk.nonEmpty) {
+        println("LOG")
         IO.effectSuspendTotal {
           writeBuffer.clear()
           val (c, remainder) = chunk.splitAt(writeBuffer.capacity())

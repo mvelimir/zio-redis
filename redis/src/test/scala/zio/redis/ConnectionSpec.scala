@@ -11,59 +11,59 @@ trait ConnectionSpec extends BaseSpec {
 
   val connectionSuite: Spec[Annotations with RedisExecutor, TestFailure[RedisError], TestSuccess] =
     suite("connection")(
-      suite("clientCaching")(
-        testM("track keys") {
-          for {
-            _            <- clientTrackingOff
-            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
-            _            <- clientCaching(true)
-            trackingInfo <- clientTrackingInfo
-          } yield assert(trackingInfo.flags.caching)(isSome(isTrue))
-        },
-        testM("don't track keys") {
-          for {
-            _            <- clientTrackingOff
-            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
-            _            <- clientCaching(false)
-            trackingInfo <- clientTrackingInfo
-          } yield assert(trackingInfo.flags.caching)(isSome(isFalse))
-        }
-      ),
-      suite("clientId")(
-        testM("get client id") {
-          for {
-            id        <- clientId
-            info      <- clientInfo
-            expectedId = info.id
-          } yield assert(id)(equalTo(expectedId))
-        }
-      ) @@ ignore,
-      suite("clientInfo")(
-        testM("get client info") {
-          for {
-            info         <- clientInfo
-            id            = info.id
-            name          = info.name.getOrElse("")
-            expectedId   <- clientId
-            expectedName <- clientGetName
-          } yield assert(id)(equalTo(expectedId)) &&
-            assert(name)(equalTo(expectedName.getOrElse("")))
-        } @@ ignore
-      ),
-      suite("clientKill")(
-        testM("error when a connection with the specifed address doesn't exist") {
-          clientKill(Address(InetAddress.getByName("0.0.0.0"), 0)).either.map(assert(_)(isLeft))
-        },
-        testM("specify filters that don't kill the connection") {
-          clientKill(ClientKillFilter.SkipMe(false), ClientKillFilter.Id(3341L)).map(assert(_)(equalTo(0L)))
-        },
-        testM("specify filters that kill the connection but skipme is enabled") {
-          for {
-            id            <- clientId
-            clientsKilled <- clientKill(ClientKillFilter.SkipMe(true), ClientKillFilter.Id(id))
-          } yield assert(clientsKilled)(equalTo(0L))
-        }
-      ),
+//      suite("clientCaching")(
+//        testM("track keys") {
+//          for {
+//            _            <- clientTrackingOff
+//            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
+//            _            <- clientCaching(true)
+//            trackingInfo <- clientTrackingInfo
+//          } yield assert(trackingInfo.flags.caching)(isSome(isTrue))
+//        },
+//        testM("don't track keys") {
+//          for {
+//            _            <- clientTrackingOff
+//            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
+//            _            <- clientCaching(false)
+//            trackingInfo <- clientTrackingInfo
+//          } yield assert(trackingInfo.flags.caching)(isSome(isFalse))
+//        }
+//      ),
+//      suite("clientId")(
+//        testM("get client id") {
+//          for {
+//            id        <- clientId
+//            info      <- clientInfo
+//            expectedId = info.id
+//          } yield assert(id)(equalTo(expectedId))
+//        }
+//      ) @@ ignore,
+//      suite("clientInfo")(
+//        testM("get client info") {
+//          for {
+//            info         <- clientInfo
+//            id            = info.id
+//            name          = info.name.getOrElse("")
+//            expectedId   <- clientId
+//            expectedName <- clientGetName
+//          } yield assert(id)(equalTo(expectedId)) &&
+//            assert(name)(equalTo(expectedName.getOrElse("")))
+//        } @@ ignore
+//      ),
+//      suite("clientKill")(
+//        testM("error when a connection with the specifed address doesn't exist") {
+//          clientKill(Address(InetAddress.getByName("0.0.0.0"), 0)).either.map(assert(_)(isLeft))
+//        },
+//        testM("specify filters that don't kill the connection") {
+//          clientKill(ClientKillFilter.SkipMe(false), ClientKillFilter.Id(3341L)).map(assert(_)(equalTo(0L)))
+//        },
+//        testM("specify filters that kill the connection but skipme is enabled") {
+//          for {
+//            id            <- clientId
+//            clientsKilled <- clientKill(ClientKillFilter.SkipMe(true), ClientKillFilter.Id(id))
+//          } yield assert(clientsKilled)(equalTo(0L))
+//        }
+//      ),
       suite("clientList")(
         testM("get client info") {
           for {
