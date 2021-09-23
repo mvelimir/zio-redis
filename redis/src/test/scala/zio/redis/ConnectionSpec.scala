@@ -69,7 +69,7 @@ trait ConnectionSpec extends BaseSpec {
           for {
             //id           <- clientId
             //infoChunk    <- clientList(id)()
-            expectedInfo <- clientInfo
+            _ <- clientInfo
           } yield assert(())(isUnit) //assert(infoChunk.head)(equalTo(expectedInfo))
         },                           // @@ ignore,
         testM("get empty chunk when no clients with specified ids exist") {
