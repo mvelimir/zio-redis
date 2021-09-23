@@ -32,7 +32,7 @@ private[redis] object ByteStream {
       channel     <- openChannel(address)
     } yield new Connection(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError)
 
-  private[this] final val ResponseBufferSize = 1024
+  private[this] final val ResponseBufferSize = 1000000
 
   private[this] def completionHandler[A](k: IO[IOException, A] => Unit): CompletionHandler[A, Any] =
     new CompletionHandler[A, Any] {
@@ -95,6 +95,7 @@ private[redis] object ByteStream {
 
     def write(chunk: Chunk[Byte]): IO[IOException, Unit] =
       IO.when(chunk.nonEmpty) {
+        println("LOG")
         IO.effectSuspendTotal {
           writeBuffer.clear()
           val (c, remainder) = chunk.splitAt(writeBuffer.capacity())
