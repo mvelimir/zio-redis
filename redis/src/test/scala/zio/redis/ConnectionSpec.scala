@@ -70,8 +70,11 @@ trait ConnectionSpec extends BaseSpec {
             id <- clientId
             //_    <- clientList(id)()
 //            _ <- clientInfo
-          } yield assert(())(isUnit) //assert(infoChunk.head)(equalTo(expectedInfo))
-        },                           // @@ ignore,
+          } yield {
+            println("ID: " + id.toString)
+            assert(())(isUnit)
+          } //assert(infoChunk.head)(equalTo(expectedInfo))
+        },  // @@ ignore,
         testM("get empty chunk when no clients with specified ids exist") {
           clientList(76L, 77L, 78L)().map(assert(_)(equalTo(Chunk.empty)))
         }
