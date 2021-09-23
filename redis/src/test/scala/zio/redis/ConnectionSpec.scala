@@ -1,7 +1,5 @@
 package zio.redis
 
-import java.net.InetAddress
-
 import zio.Chunk
 import zio.test.Assertion._
 import zio.test.TestAspect._
