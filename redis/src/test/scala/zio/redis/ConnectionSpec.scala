@@ -1,6 +1,7 @@
 package zio.redis
 
 import java.net.InetAddress
+
 import zio.Chunk
 import zio.test.Assertion._
 import zio.test.TestAspect._
@@ -66,9 +67,9 @@ trait ConnectionSpec extends BaseSpec {
       suite("clientList")(
         testM("get client info") {
           for {
-            //id           <- clientId
-            //infoChunk    <- clientList(id)()
-            _ <- clientInfo
+            id <- clientId
+            //_    <- clientList(id)()
+//            _ <- clientInfo
           } yield assert(())(isUnit) //assert(infoChunk.head)(equalTo(expectedInfo))
         },                           // @@ ignore,
         testM("get empty chunk when no clients with specified ids exist") {
