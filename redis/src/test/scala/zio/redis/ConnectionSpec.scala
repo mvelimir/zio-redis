@@ -68,7 +68,7 @@ trait ConnectionSpec extends BaseSpec {
         testM("get client info") {
           for {
             id <- clientId
-            //_    <- clientList(id)()
+            _  <- clientList(id)()
 //            _ <- clientInfo
           } yield {
             println("ID: " + id.toString)
