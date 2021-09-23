@@ -2,7 +2,6 @@ package zio.redis
 
 import java.net.InetAddress
 import zio.Chunk
-//import zio.duration._
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
@@ -48,7 +47,7 @@ trait ConnectionSpec extends BaseSpec {
             expectedName <- clientGetName
           } yield assert(id)(equalTo(expectedId)) &&
             assert(name)(equalTo(expectedName.getOrElse("")))
-        }
+        } @@ ignore
       ),
       suite("clientKill")(
         testM("error when a connection with the specifed address doesn't exist") {
