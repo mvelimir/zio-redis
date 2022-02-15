@@ -2995,8 +2995,8 @@ private[redis] final class TestExecutor private (
             strings.getOrElse(key, "").map { string =>
               val respOption = for {
                 bit     <- Option(bit).filter(_ => bit == "0" || bit == "1")
-                start   <- start.flatMap(start => toIntOption(start)).orElse(Some(0))
-                end     <- end.flatMap(end => toIntOption(end)).orElse(Some(string.length))
+                start   <- start.map(start => toIntOption(start)).getOrElse(Some(0))
+                end     <- end.map(end => toIntOption(end)).getOrElse(Some(string.length))
                 newStart = if (start < 0) string.length + start else start
                 newEnd   = (if (end < 0) string.length + end else end) + 1
                 index = string.zipWithIndex
@@ -3022,7 +3022,7 @@ private[redis] final class TestExecutor private (
           orWrongType(isString(key))(
             strings.get(key).flatMap { stringOption =>
               val respOption = for {
-                num    <- stringOption.flatMap(string => toLongOption(string)).orElse(Some(0L))
+                num    <- stringOption.map(string => toLongOption(string)).getOrElse(Some(0L))
                 result <- if (num > Long.MinValue) Some(num - 1) else None
               } yield putString(key, result.toString).as(RespValue.Integer(result))
 
@@ -3039,7 +3039,7 @@ private[redis] final class TestExecutor private (
           orWrongType(isString(key))(
             strings.get(key).flatMap { stringOption =>
               val respOption = for {
-                num <- stringOption.flatMap(string => toLongOption(string)).orElse(Some(0L))
+                num <- stringOption.map(string => toLongOption(string)).getOrElse(Some(0L))
                 result <- if (decr >= 0 && num >= Long.MinValue + decr || decr < 0 && num <= Long.MaxValue + decr) {
                             Some(num - decr)
                           } else None
@@ -3108,7 +3108,7 @@ private[redis] final class TestExecutor private (
           orWrongType(isString(key))(
             strings.get(key).flatMap { stringOption =>
               val respOption = for {
-                num    <- stringOption.flatMap(string => toLongOption(string)).orElse(Some(0L))
+                num    <- stringOption.map(string => toLongOption(string)).getOrElse(Some(0L))
                 result <- if (num < Long.MaxValue) Some(num + 1) else None
               } yield putString(key, result.toString).as(RespValue.Integer(result))
 
