@@ -17,18 +17,16 @@
 package zio.redis
 
 import zio._
-import zio.clock.Clock
-import zio.duration._
 import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.{BulkString, bulkString}
-import zio.redis.TestExecutor.{KeyInfo, KeyType}
-import zio.stm.{random => _, _}
+import zio.redis.TestExecutor.{KeyInfo, KeyType, Regex}
+import zio.stm._
 
 import java.nio.file.{FileSystems, Paths}
 import java.time.Instant
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
-import scala.util.Try
+import scala.util.{Try, matching}
 
 private[redis] final class TestExecutor private (
   clientInfo: TRef[ClientInfo],
@@ -40,14 +38,13 @@ private[redis] final class TestExecutor private (
   randomPick: Int => USTM[Int],
   hyperLogLogs: TMap[String, Set[String]],
   hashes: TMap[String, Map[String, String]],
-  sortedSets: TMap[String, Map[String, Double]],
-  clock: Clock
+  sortedSets: TMap[String, Map[String, Double]]
 ) extends RedisExecutor {
 
   override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
     for {
       name <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
-      now  <- clock.get.instant
+      now  <- ZIO.clockWith(_.instant)
       _    <- clearExpired(now).commit
       result <- name.asString match {
                   case api.Lists.BlPop =>
@@ -94,7 +91,7 @@ private[redis] final class TestExecutor private (
       runCommand(name, input, now).commit
         .timeout(timeout.seconds)
         .map(_.getOrElse(respValue))
-        .provideLayer(Clock.live)
+        .withClock(Clock.ClockLive)
     } else
       runCommand(name, input, now).commit
 
@@ -303,7 +300,6 @@ private[redis] final class TestExecutor private (
                       .getAndUpdate(trackingInfo => trackingInfo.copy(prefixes = trackingInfo.prefixes ++ prefixes))
                       .as(())
                   )
-
                   addTracking *> addMode *> addNoLoop *> addRedirectId *> addPrefixes.as(RespValue.SimpleString("OK"))
                 }
               }
@@ -674,7 +670,7 @@ private[redis] final class TestExecutor private (
       case api.Keys.Exists | api.Keys.Touch =>
         STM
           .foldLeft(input)(0L) { case (acc, key) =>
-            STM.ifM(keys.contains(key.asString))(STM.succeedNow(acc + 1), STM.succeedNow(acc))
+            STM.ifSTM(keys.contains(key.asString))(STM.succeedNow(acc + 1), STM.succeedNow(acc))
           }
           .map(RespValue.Integer)
 
@@ -738,7 +734,7 @@ private[redis] final class TestExecutor private (
         val key    = input(0).asString
         val newkey = input(1).asString
         STM
-          .ifM(keys.contains(newkey))(STM.succeedNow(0L), rename(key, newkey).as(1L))
+          .ifSTM(keys.contains(newkey))(STM.succeedNow(0L), rename(key, newkey).as(1L))
           .map(RespValue.Integer)
           .catchAll(error => STM.succeedNow(error))
 
@@ -802,7 +798,7 @@ private[redis] final class TestExecutor private (
       case api.Keys.Ttl =>
         val key = input.head.asString
         STM
-          .ifM(keys.contains(key))(
+          .ifSTM(keys.contains(key))(
             ttlOf(key, now).map(_.fold(-1L)(_.getSeconds)),
             STM.succeedNow(-2L)
           )
@@ -811,7 +807,7 @@ private[redis] final class TestExecutor private (
       case api.Keys.PTtl =>
         val key = input.head.asString
         STM
-          .ifM(keys.contains(key))(
+          .ifSTM(keys.contains(key))(
             ttlOf(key, now).map(_.fold(-1L)(_.toMillis)),
             STM.succeedNow(-2L)
           )
@@ -915,7 +911,7 @@ private[redis] final class TestExecutor private (
         val mainKey     = keys(1)
         val otherKeys   = keys.tail
 
-        (STM.fail(()).unlessM(isSet(destination)) *> sInter(mainKey, otherKeys)).foldM(
+        (STM.fail(()).unlessSTM(isSet(destination)) *> sInter(mainKey, otherKeys)).foldSTM(
           _ => STM.succeedNow(Replies.WrongType),
           s =>
             for {
@@ -942,7 +938,7 @@ private[redis] final class TestExecutor private (
         orWrongType(isSet(sourceKey))(
           sets.getOrElse(sourceKey, Set.empty).flatMap { source =>
             if (source.contains(member))
-              STM.ifM(isSet(destinationKey))(
+              STM.ifSTM(isSet(destinationKey))(
                 for {
                   dest <- sets.getOrElse(destinationKey, Set.empty)
                   _    <- putSet(sourceKey, source - member)
@@ -1388,11 +1384,11 @@ private[redis] final class TestExecutor private (
         orWrongType(forAll(keys)(isList))(
           (for {
             allLists <-
-              STM.foreach(keys.map(key => STM.succeedNow(key) &&& lists.getOrElse(key, Chunk.empty)))(identity)
+              STM.foreach(keys.map(key => STM.succeedNow(key) zip lists.getOrElse(key, Chunk.empty)))(identity)
             nonEmptyLists <- STM.succeed(allLists.collect { case (key, v) if v.nonEmpty => key -> v })
             (sk, sl)      <- STM.fromOption(nonEmptyLists.headOption)
             _             <- putList(sk, sl.tail)
-          } yield Replies.array(Chunk(sk, sl.head))).foldM(_ => STM.retry, result => STM.succeed(result))
+          } yield Replies.array(Chunk(sk, sl.head))).foldSTM(_ => STM.retry, result => STM.succeed(result))
         )
 
       case api.Lists.BrPop =>
@@ -1401,11 +1397,11 @@ private[redis] final class TestExecutor private (
         orWrongType(forAll(keys)(isList))(
           (for {
             allLists <-
-              STM.foreach(keys.map(key => STM.succeedNow(key) &&& lists.getOrElse(key, Chunk.empty)))(identity)
+              STM.foreach(keys.map(key => STM.succeedNow(key) zip lists.getOrElse(key, Chunk.empty)))(identity)
             nonEmptyLists <- STM.succeed(allLists.collect { case (key, v) if v.nonEmpty => key -> v })
             (sk, sl)      <- STM.fromOption(nonEmptyLists.headOption)
             _             <- putList(sk, sl.dropRight(1))
-          } yield Replies.array(Chunk(sk, sl.last))).foldM(_ => STM.retry, result => STM.succeed(result))
+          } yield Replies.array(Chunk(sk, sl.last))).foldSTM(_ => STM.retry, result => STM.succeed(result))
         )
 
       case api.Lists.BrPopLPush =>
@@ -1422,7 +1418,7 @@ private[redis] final class TestExecutor private (
             destinationResult = value +: destinationList
             _                <- putList(source, sourceResult)
             _                <- putList(destination, destinationResult)
-          } yield RespValue.bulkString(value)).foldM(_ => STM.retry, result => STM.succeed(result))
+          } yield RespValue.bulkString(value)).foldSTM(_ => STM.retry, result => STM.succeed(result))
         )
 
       case api.Lists.LMove =>
@@ -1439,7 +1435,7 @@ private[redis] final class TestExecutor private (
 
         orWrongType(forAll(Chunk(source, destination))(isList))(
           (for {
-            sourceList      <- lists.get(source) >>= (l => STM.fromOption(l))
+            sourceList      <- lists.get(source) flatMap (l => STM.fromOption(l))
             destinationList <- lists.getOrElse(destination, Chunk.empty)
             element <- STM.fromOption(sourceSide match {
                          case Side.Left  => sourceList.headOption
@@ -1481,7 +1477,7 @@ private[redis] final class TestExecutor private (
 
         orWrongType(forAll(Chunk(source, destination))(isList))(
           (for {
-            sourceList      <- lists.get(source) >>= (l => STM.fromOption(l))
+            sourceList      <- lists.get(source) flatMap (l => STM.fromOption(l))
             destinationList <- lists.getOrElse(destination, Chunk.empty)
             element <- STM.fromOption(sourceSide match {
                          case Side.Left  => sourceList.headOption
@@ -1506,7 +1502,7 @@ private[redis] final class TestExecutor private (
                    putList(source, newSourceList) *> putList(destination, newDestinationList)
                  else
                    putList(source, newDestinationList)
-          } yield element).foldM(_ => STM.retry, result => STM.succeed(RespValue.bulkString(result)))
+          } yield element).foldSTM(_ => STM.retry, result => STM.succeed(RespValue.bulkString(result)))
         )
 
       case api.Lists.LPos =>
@@ -1592,7 +1588,7 @@ private[redis] final class TestExecutor private (
             hash       <- hashes.getOrElse(key, Map.empty)
             countExists = hash.keys count values.contains
             newHash     = hash -- values
-            _          <- ZSTM.ifM(ZSTM.succeedNow(newHash.isEmpty))(delete(key), putHash(key, newHash))
+            _          <- ZSTM.ifSTM(ZSTM.succeedNow(newHash.isEmpty))(delete(key), putHash(key, newHash))
           } yield RespValue.Integer(countExists.toLong)
         )
 
@@ -1832,12 +1828,12 @@ private[redis] final class TestExecutor private (
         orWrongType(forAll(keys)(isSortedSet))(
           (for {
             allSets <-
-              STM.foreach(keys.map(key => STM.succeedNow(key) &&& sortedSets.getOrElse(key, Map.empty)))(identity)
+              STM.foreach(keys.map(key => STM.succeedNow(key) zip sortedSets.getOrElse(key, Map.empty)))(identity)
             nonEmpty    <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
             (sk, sl)    <- STM.fromOption(nonEmpty.headOption)
             (maxM, maxV) = sl.toList.maxBy(_._2)
             _           <- putSortedSet(sk, sl - maxM)
-          } yield Replies.array(Chunk(sk, maxM, maxV.toString))).foldM(_ => STM.retry, result => STM.succeed(result))
+          } yield Replies.array(Chunk(sk, maxM, maxV.toString))).foldSTM(_ => STM.retry, result => STM.succeed(result))
         )
 
       case api.SortedSets.BzPopMin =>
@@ -1846,12 +1842,12 @@ private[redis] final class TestExecutor private (
         orWrongType(forAll(keys)(isSortedSet))(
           (for {
             allSets <-
-              STM.foreach(keys.map(key => STM.succeedNow(key) &&& sortedSets.getOrElse(key, Map.empty)))(identity)
+              STM.foreach(keys.map(key => STM.succeedNow(key) zip sortedSets.getOrElse(key, Map.empty)))(identity)
             nonEmpty    <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
             (sk, sl)    <- STM.fromOption(nonEmpty.headOption)
             (maxM, maxV) = sl.toList.minBy(_._2)
             _           <- putSortedSet(sk, sl - maxM)
-          } yield Replies.array(Chunk(sk, maxM, maxV.toString))).foldM(_ => STM.retry, result => STM.succeed(result))
+          } yield Replies.array(Chunk(sk, maxM, maxV.toString))).foldSTM(_ => STM.retry, result => STM.succeed(result))
         )
 
       case api.SortedSets.ZAdd =>
@@ -2943,6 +2939,252 @@ private[redis] final class TestExecutor private (
           )
         }
 
+      case api.Strings.BitField =>
+        val stringInput = input.map(_.asString)
+        val keyOption   = stringInput.headOption
+
+        import BitFieldCommand.BitFieldOverflow
+
+        def decodeBitFieldInt(s: String): Option[BitFieldType.Int] = s match {
+          case Regex.unsignedInt(size) =>
+            toIntOption(size).collect {
+              case size if size <= 64 =>
+                BitFieldType.UnsignedInt(size)
+            }
+          case Regex.signedInt(size) =>
+            toIntOption(size).collect {
+              case size if size <= 63 =>
+                BitFieldType.SignedInt(size)
+            }
+          case _ => None
+        }
+
+        def decodeOffset(s: String): Option[Int] = s match {
+          case Regex.offset("#", number) => toIntOption(number).collect { case number if number >= 0 => number * 8 }
+          case Regex.offset("", number)  => toIntOption(number).filter(_ >= 0)
+          case _                         => None
+        }
+
+        def parseSignedLong(string: String): Option[Long] =
+          Option(string).filter(_.length <= 64).flatMap { string =>
+            Try {
+              val unsigned = BigInt(string, 2)
+              val limit    = BigInt(1) << (string.length - 1)
+              val signed   = if (unsigned >= limit) unsigned - 2 * limit else unsigned
+
+              signed.toLong
+            }.toOption
+          }
+
+        def parseUnsignedLong(string: String): Option[Long] =
+          parseSignedLong("0" + string).filter(_ >= 0L)
+
+        def overflowBehavior(
+          value: Long,
+          bitFieldIntType: BitFieldType.Int,
+          ifUnsigned: (Long, Int) => Option[Long],
+          ifSigned: (Long, Int) => Option[Long]
+        ): Option[Long] = bitFieldIntType match {
+          case BitFieldType.UnsignedInt(size) => ifUnsigned(value, size)
+          case BitFieldType.SignedInt(size)   => ifSigned(value, size)
+        }
+
+        def maxValueUnsigned(bits: Int): Long = Math.pow(2, bits.toDouble).toLong - 1L
+
+        def maxValueSigned(bits: Int): Long = Math.pow(2, (bits - 1).toDouble).toLong - 1L
+
+        def minValueSigned(bits: Int): Long = -Math.pow(2, (bits - 1).toDouble).toLong
+
+        def overflowValue(
+          value: Long,
+          bitFieldIntType: BitFieldType.Int,
+          overflow: BitFieldOverflow
+        ): Option[Long] = overflow match {
+          case BitFieldOverflow.Fail =>
+            overflowBehavior(
+              value,
+              bitFieldIntType,
+              ifUnsigned = (value, size) =>
+                Option(value).filter { value =>
+                  value >= 0L && value <= maxValueUnsigned(size)
+                },
+              ifSigned = (value, size) =>
+                Option(value).filter { value =>
+                  value >= minValueSigned(size) && value <= maxValueSigned(size)
+                }
+            )
+          case BitFieldOverflow.Sat =>
+            overflowBehavior(
+              value,
+              bitFieldIntType,
+              ifUnsigned = (value, size) =>
+                Option(value).map { value =>
+                  if (value < 0L) 0L
+                  else if (value > maxValueUnsigned(size)) maxValueUnsigned(size)
+                  else value
+                },
+              ifSigned = (value, size) =>
+                Option(value).map { value =>
+                  if (value < minValueSigned(size)) minValueSigned(size)
+                  else if (value > maxValueSigned(size)) maxValueSigned(size)
+                  else value
+                }
+            )
+          case BitFieldOverflow.Wrap =>
+            overflowBehavior(
+              value,
+              bitFieldIntType,
+              ifUnsigned = (value, size) =>
+                Option(value).map { value =>
+                  value % (maxValueUnsigned(size) + 1L)
+                },
+              ifSigned = (value, size) =>
+                Option(value).map { value =>
+                  value % maxValueSigned(size) - minValueSigned(size)
+                }
+            )
+        }
+
+        def getBitFieldBytes(string: String, offset: Int, size: Int): String = {
+          val requiredByteLength = ((offset + size - 1) >> 3) + 1
+          val byteOffset         = offset >> 3
+          val byteSize           = ((size - 1) >> 3) + 1
+          val coveredBytes       = string.length - byteOffset
+          val nullCharPadding    = "\u0000" * (byteSize - coveredBytes)
+          val bitFieldString     = string.slice(byteOffset, requiredByteLength) + nullCharPadding
+          val bitField           = bitFieldString.foldLeft("")((a, b) => a + f"${b.toInt.toBinaryString}%8s".replace(' ', '0'))
+
+          bitField
+        }
+
+        def getBitField(string: String, offset: Int, size: Int): String = {
+          val bitField        = getBitFieldBytes(string, offset, size)
+          val bitOffset       = offset & 7
+          val bitFieldTrimmed = bitField.slice(bitOffset, bitOffset + size)
+
+          bitFieldTrimmed
+        }
+
+        def setBitField(string: String, offset: Int, size: Int, value: Long): String = {
+          val bitField                   = getBitFieldBytes(string, offset, size)
+          val bitOffset                  = offset & 7
+          val bitFieldPrefix             = bitField.slice(0, bitOffset)
+          val setBinaryValue             = s"%${size}s".format(value.toBinaryString).replace(' ', '0')
+          val bitFieldSuffix             = bitField.slice(bitOffset + size, bitField.length)
+          val setBitField                = bitFieldPrefix + setBinaryValue + bitFieldSuffix
+          val setBitFieldString          = setBitField.grouped(8).toList.map(Integer.parseInt(_, 2).toChar).mkString
+          val requiredPrefixByteLength   = (offset >> 3) + 1
+          val byteOffset                 = offset >> 3
+          val nullCharPadding            = "\u0000" * (requiredPrefixByteLength - string.length)
+          val nullCharPaddedStringPrefix = string.slice(0, byteOffset) + nullCharPadding
+          val requiredByteLength         = ((offset + size - 1) >> 3) + 1
+          val stringSuffix               = string.slice(requiredByteLength, string.length)
+          val newString                  = nullCharPaddedStringPrefix + setBitFieldString + stringSuffix
+
+          newString
+        }
+
+        type BitFieldState = (String, Chunk[RespValue])
+
+        def parseLongFromBitField(string: String, offset: Int, bitFieldType: BitFieldType.Int): Option[Long] =
+          bitFieldType match {
+            case BitFieldType.UnsignedInt(size) => parseUnsignedLong(getBitField(string, offset, size))
+            case BitFieldType.SignedInt(size)   => parseSignedLong(getBitField(string, offset, size))
+          }
+
+        def parseBitFieldCommand(input: List[String]): Option[(BitFieldCommand, List[String])] = input match {
+          case "GET" :: encoding :: offset :: tail =>
+            for {
+              bitFieldInt <- decodeBitFieldInt(encoding)
+              offset      <- decodeOffset(offset)
+            } yield (BitFieldCommand.BitFieldGet(bitFieldInt, offset), tail)
+          case "SET" :: encoding :: offset :: value :: tail =>
+            for {
+              bitFieldInt <- decodeBitFieldInt(encoding)
+              offset      <- decodeOffset(offset)
+              value       <- toLongOption(value)
+            } yield (BitFieldCommand.BitFieldSet(bitFieldInt, offset, value), tail)
+          case "INCRBY" :: encoding :: offset :: increment :: tail =>
+            for {
+              bitFieldInt <- decodeBitFieldInt(encoding)
+              offset      <- decodeOffset(offset)
+              increment   <- toLongOption(increment)
+            } yield (BitFieldCommand.BitFieldIncr(bitFieldInt, offset, increment), tail)
+          case "OVERFLOW" :: overflow :: tail =>
+            overflow match {
+              case "FAIL" => Option((BitFieldOverflow.Fail, tail))
+              case "SAT"  => Option((BitFieldOverflow.Sat, tail))
+              case "WRAP" => Option((BitFieldOverflow.Wrap, tail))
+              case _      => None
+            }
+          case _ => None
+        }
+
+        def runBitFieldCommands(
+          input: List[String],
+          overflow: BitFieldOverflow,
+          bitFieldState: BitFieldState
+        ): Option[BitFieldState] =
+          input match {
+            case Nil =>
+              Option(bitFieldState)
+            case nonEmptyInput =>
+              parseBitFieldCommand(nonEmptyInput).flatMap { case (bitFieldCommand, inputTail) =>
+                bitFieldCommand match {
+                  case BitFieldCommand.BitFieldGet(bitFieldInt: BitFieldType.Int, offset) =>
+                    val (string, respChunk) = bitFieldState
+
+                    parseLongFromBitField(string, offset, bitFieldInt).flatMap { long =>
+                      val newBitFieldState = (string, respChunk :+ RespValue.Integer(long))
+
+                      runBitFieldCommands(inputTail, overflow, newBitFieldState)
+                    }
+                  case BitFieldCommand.BitFieldSet(bitFieldInt: BitFieldType.Int, offset, value) =>
+                    val (string, respChunk) = bitFieldState
+
+                    parseLongFromBitField(string, offset, bitFieldInt).flatMap { long =>
+                      val newBitFieldState = overflowValue(value, bitFieldInt, overflow).map { value =>
+                        (setBitField(string, offset, bitFieldInt.size, value), respChunk :+ RespValue.Integer(long))
+                      }.getOrElse((string, respChunk :+ RespValue.NullBulkString))
+
+                      runBitFieldCommands(inputTail, overflow, newBitFieldState)
+                    }
+                  case BitFieldCommand.BitFieldIncr(bitFieldInt: BitFieldType.Int, offset, increment) =>
+                    val (string, respChunk) = bitFieldState
+
+                    parseLongFromBitField(string, offset, bitFieldInt).flatMap { long =>
+                      val newBitFieldState = overflowValue(long + increment, bitFieldInt, overflow).map { value =>
+                        (setBitField(string, offset, bitFieldInt.size, value), respChunk :+ RespValue.Integer(value))
+                      }.getOrElse((string, respChunk :+ RespValue.NullBulkString))
+
+                      runBitFieldCommands(inputTail, overflow, newBitFieldState)
+                    }
+                  case overflow: BitFieldOverflow =>
+                    runBitFieldCommands(inputTail, overflow, bitFieldState)
+                }
+              }
+          }
+
+        orMissingParameter(keyOption) { key =>
+          orWrongType(isString(key))(
+            strings.getOrElse(key, "").flatMap { string =>
+              val bitFieldStateOption = runBitFieldCommands(
+                stringInput.tail.toList,
+                BitFieldOverflow.Wrap,
+                (string, Chunk.empty)
+              )
+
+              STM
+                .fromOption(bitFieldStateOption)
+                .flatMap { case (string, respChunk) =>
+                  strings.put(key, string) *>
+                    STM.succeed(if (respChunk.isEmpty) RespValue.NullArray else RespValue.Array(respChunk))
+                }
+                .orElseSucceed(Replies.Error)
+            }
+          )
+        }
+
       case api.Strings.BitOp =>
         val stringInput = input.map(_.asString)
 
@@ -2951,7 +3193,7 @@ private[redis] final class TestExecutor private (
         val keyChunkOption  = Some(stringInput.drop(2)).filter(_.nonEmpty)
 
         def bitOp(op: (Byte, Byte) => Int, destKey: String, keyChunk: Chunk[String]): USTM[RespValue] =
-          STM.ifM(STM.foreach(keyChunk)(key => isString(key)).map(_.forall(_ == true)))(
+          STM.ifSTM(STM.foreach(keyChunk)(key => isString(key)).map(_.forall(_ == true)))(
             STM.foreach(keyChunk)(key => strings.getOrElse(key, "")).flatMap { chunk =>
               val string = chunk.foldLeft("") { (a, b) =>
                 a.getBytes.zipAll(b.getBytes, 0.toByte, 0.toByte).map(ab => op(ab._1, ab._2).toChar).mkString
@@ -3187,7 +3429,7 @@ private[redis] final class TestExecutor private (
           else None
 
         orMissingParameter(keyValuesOption) { keyValues =>
-          STM.ifM(STM.foreach(keyValues.map(_._1))(isUsed).map(_.forall(_ == false)))(
+          STM.ifSTM(STM.foreach(keyValues.map(_._1))(isUsed).map(_.forall(_ == false)))(
             STM.foreach(keyValues)(keyValue => putString(keyValue._1, keyValue._2)).as(RespValue.Integer(1L)),
             STM.succeed(RespValue.Integer(0L))
           )
@@ -3210,7 +3452,7 @@ private[redis] final class TestExecutor private (
         val get = stringInput.contains("GET")
 
         orMissingParameter2(keyOption, valueOption) { (key, value) =>
-          STM.ifM(
+          STM.ifSTM(
             isUsed(key).map(used => update.isEmpty || used && update.contains("XX") || !used && update.contains("NX"))
           )(
             option match {
@@ -3335,7 +3577,7 @@ private[redis] final class TestExecutor private (
         val valueOption = input.lift(1).map(_.asString)
 
         orMissingParameter2(keyOption, valueOption) { (key, value) =>
-          STM.ifM(isUsed(key))(
+          STM.ifSTM(isUsed(key))(
             STM.succeed(RespValue.Integer(0L)),
             putString(key, value).as(RespValue.Integer(1L))
           )
@@ -3589,12 +3831,12 @@ private[redis] final class TestExecutor private (
   private[this] def orWrongType(predicate: USTM[Boolean])(
     program: => USTM[RespValue]
   ): USTM[RespValue] =
-    STM.ifM(predicate)(program, STM.succeedNow(Replies.WrongType))
+    STM.ifSTM(predicate)(program, STM.succeedNow(Replies.WrongType))
 
   private[this] def orInvalidParameter(predicate: USTM[Boolean])(
     program: => USTM[RespValue]
   ): USTM[RespValue] =
-    STM.ifM(predicate)(program, STM.succeedNow(Replies.Error))
+    STM.ifSTM(predicate)(program, STM.succeedNow(Replies.Error))
 
   private[this] def apply[A, B](optionAB: Option[A => B])(optionA: Option[A]): Option[B] = for {
     a  <- optionA
@@ -3686,24 +3928,24 @@ private[redis] final class TestExecutor private (
       keyInfo    <- keyInfoOpt.fold[STM[RespValue.Error, KeyInfo]](STM.fail(Replies.Error))(STM.succeedNow)
       _          <- keys.delete(key)
       _          <- keys.put(newkey, keyInfo)
-      _          <- STM.whenCaseM(lists.get(key)) { case Some(v) => lists.delete(key) *> lists.put(newkey, v) }
-      _          <- STM.whenCaseM(sets.get(key)) { case Some(v) => sets.delete(key) *> sets.put(newkey, v) }
-      _          <- STM.whenCaseM(strings.get(key)) { case Some(v) => strings.delete(key) *> strings.put(newkey, v) }
-      _ <- STM.whenCaseM(hyperLogLogs.get(key)) { case Some(v) =>
+      _          <- STM.whenCaseSTM(lists.get(key)) { case Some(v) => lists.delete(key) *> lists.put(newkey, v) }
+      _          <- STM.whenCaseSTM(sets.get(key)) { case Some(v) => sets.delete(key) *> sets.put(newkey, v) }
+      _          <- STM.whenCaseSTM(strings.get(key)) { case Some(v) => strings.delete(key) *> strings.put(newkey, v) }
+      _ <- STM.whenCaseSTM(hyperLogLogs.get(key)) { case Some(v) =>
              hyperLogLogs.delete(key) *> hyperLogLogs.put(newkey, v)
            }
-      _ <- STM.whenCaseM(hashes.get(key)) { case Some(v) => hashes.delete(key) *> hashes.put(newkey, v) }
+      _ <- STM.whenCaseSTM(hashes.get(key)) { case Some(v) => hashes.delete(key) *> hashes.put(newkey, v) }
     } yield ()
 
   /** Deletes key from underlying data and metadata structures. */
   private[this] def delete(key: String): USTM[Int] =
-    STM.ifM(keys.contains(key))(
+    STM.ifSTM(keys.contains(key))(
       for {
-        _ <- STM.whenM(isList(key))(lists.delete(key))
-        _ <- STM.whenM(isSet(key))(sets.delete(key))
-        _ <- STM.whenM(isString(key))(strings.delete(key))
-        _ <- STM.whenM(isHyperLogLog(key))(hyperLogLogs.delete(key))
-        _ <- STM.whenM(isHash(key))(hashes.delete(key))
+        _ <- STM.whenSTM(isList(key))(lists.delete(key))
+        _ <- STM.whenSTM(isSet(key))(sets.delete(key))
+        _ <- STM.whenSTM(isString(key))(strings.delete(key))
+        _ <- STM.whenSTM(isHyperLogLog(key))(hyperLogLogs.delete(key))
+        _ <- STM.whenSTM(isHash(key))(hashes.delete(key))
         _ <- keys.delete(key)
       } yield 1,
       STM.succeedNow(0)
@@ -3770,7 +4012,7 @@ private[redis] final class TestExecutor private (
     }
 
     def get(key: String): STM[Nothing, State] =
-      STM.ifM(isSet(key))(
+      STM.ifSTM(isSet(key))(
         sets.get(key).map(_.fold[State](State.Continue(Set.empty))(State.Continue)),
         STM.succeedNow(State.WrongType)
       )
@@ -3900,6 +4142,12 @@ private[redis] final class TestExecutor private (
 
 private[redis] object TestExecutor {
 
+  object Regex {
+    val unsignedInt: matching.Regex = "u(\\d+)".r
+    val signedInt: matching.Regex   = "i(\\d+)".r
+    val offset: matching.Regex      = "([#]?)(\\d+)".r
+  }
+
   sealed trait KeyType extends Product with Serializable
 
   object KeyType {
@@ -3926,39 +4174,36 @@ private[redis] object TestExecutor {
     lazy val redisType: RedisType = KeyType.toRedisType(`type`)
   }
 
-  lazy val live: URLayer[zio.random.Random with Clock, Has[RedisExecutor]] = {
-    val executor = for {
-      seed         <- random.nextInt
-      clock        <- ZIO.identity[Clock]
-      sRandom       = new scala.util.Random(seed)
-      ref          <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
-      randomPick    = (i: Int) => ref.modify(s => (s.head(i), s.tail))
-      keys         <- TMap.empty[String, KeyInfo].commit
-      sets         <- TMap.empty[String, Set[String]].commit
-      strings      <- TMap.empty[String, String].commit
-      hyperLogLogs <- TMap.empty[String, Set[String]].commit
-      lists        <- TMap.empty[String, Chunk[String]].commit
-      hashes       <- TMap.empty[String, Map[String, String]].commit
-      sortedSets   <- TMap.empty[String, Map[String, Double]].commit
-      clientInfo   <- TRef.make(ClientInfo(id = 174716)).commit
-      clientTInfo =
-        ClientTrackingInfo(ClientTrackingFlags(clientSideCaching = false), ClientTrackingRedirect.NotEnabled)
-      clientTrackingInfo <- TRef.make(clientTInfo).commit
-    } yield new TestExecutor(
-      clientInfo,
-      clientTrackingInfo,
-      keys,
-      lists,
-      sets,
-      strings,
-      randomPick,
-      hyperLogLogs,
-      hashes,
-      sortedSets,
-      clock
-    )
-
-    executor.toLayer
-  }
+  lazy val layer: ULayer[RedisExecutor] =
+    ZLayer {
+      for {
+        seed         <- ZIO.randomWith(_.nextInt)
+        sRandom       = new scala.util.Random(seed)
+        ref          <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
+        randomPick    = (i: Int) => ref.modify(s => (s.head(i), s.tail))
+        keys         <- TMap.empty[String, KeyInfo].commit
+        sets         <- TMap.empty[String, Set[String]].commit
+        strings      <- TMap.empty[String, String].commit
+        hyperLogLogs <- TMap.empty[String, Set[String]].commit
+        lists        <- TMap.empty[String, Chunk[String]].commit
+        hashes       <- TMap.empty[String, Map[String, String]].commit
+        sortedSets   <- TMap.empty[String, Map[String, Double]].commit
+        clientInfo   <- TRef.make(ClientInfo(id = 174716)).commit
+        clientTInfo =
+          ClientTrackingInfo(ClientTrackingFlags(clientSideCaching = false), ClientTrackingRedirect.NotEnabled)
+        clientTrackingInfo <- TRef.make(clientTInfo).commit
+      } yield new TestExecutor(
+        clientInfo,
+        clientTrackingInfo,
+        keys,
+        lists,
+        sets,
+        strings,
+        randomPick,
+        hyperLogLogs,
+        hashes,
+        sortedSets
+      )
+    }
 
 }
